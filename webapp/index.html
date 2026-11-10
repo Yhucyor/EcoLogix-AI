@@ -179,6 +179,24 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.08);
     }
+    /* Hiệu ứng cuộn mượt từng phần ở trang index */
+    .eco-reveal {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+    .eco-reveal.eco-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .eco-delay-1 { transition-delay: 80ms; }
+    .eco-delay-2 { transition-delay: 160ms; }
+    .eco-delay-3 { transition-delay: 240ms; }
+    .eco-delay-4 { transition-delay: 320ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .eco-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    }
     /* Bảo vệ Leaflet tiles, controls & markers khỏi Tailwind Preflight / @tailwindcss/forms */
     .leaflet-container { z-index: 1; font-family: 'Plus Jakarta Sans', sans-serif !important; background: #E2E8F0; }
     .leaflet-container img,
@@ -207,7 +225,7 @@
         '/components/EcoLeafletMap.jsx?v=1',
         '/pages/OnboardingPage.jsx?v=2',
         '/pages/LoginPage.jsx?v=2',
-        '/pages/LandingPage.jsx?v=2',
+        '/pages/LandingPage.jsx?v=3',
         '/pages/DashboardPage.jsx?v=2',
         '/pages/InventoryPage.jsx?v=1',
         '/pages/ForecastingPage.jsx?v=1',

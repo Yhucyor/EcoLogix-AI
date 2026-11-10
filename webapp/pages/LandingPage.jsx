@@ -54,6 +54,42 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll('.eco-reveal'));
+    if (!nodes.length) return;
+    const revealVisible = () => {
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      nodes.forEach((el) => {
+        if (el.getBoundingClientRect().top < vh * 0.94) {
+          el.classList.add('eco-revealed');
+        }
+      });
+    };
+    const t0 = setTimeout(revealVisible, 60);
+    if (typeof IntersectionObserver === 'undefined') {
+      nodes.forEach((el) => el.classList.add('eco-revealed'));
+      return () => clearTimeout(t0);
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('eco-revealed');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -36px 0px' }
+    );
+    nodes.forEach((el) => io.observe(el));
+    window.addEventListener('scroll', revealVisible, { passive: true });
+    return () => {
+      clearTimeout(t0);
+      io.disconnect();
+      window.removeEventListener('scroll', revealVisible);
+    };
+  }, []);
+
   const FEATURE_CARDS = [
     { icon: 'fa-chart-line', title: 'Dự báo nhu cầu', desc: 'Mô hình LightGBM thực tế dự báo nhu cầu 7–90 ngày & Safety Stock.', page: 'forecasting', badge: 'LightGBM ML' },
     { icon: 'fa-route', title: 'Tối ưu lộ trình', desc: 'Giảm 15-22% chi phí nhiên liệu & tự động né giờ cấm tải 16h–18h.', page: 'routing', badge: 'CVRPTW 2-Opt' },
@@ -186,7 +222,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
               </div>
 
               {/* Hero Graphic Card */}
-              <div className="lg:col-span-5 relative flex justify-center">
+              <div className="lg:col-span-5 relative flex justify-center eco-reveal eco-delay-1">
                 <div className="w-full max-w-md lg:max-w-none bg-gradient-to-br from-sky-50/85 via-emerald-50/55 to-white rounded-3xl p-6 border border-sky-100 shadow-2xl relative overflow-hidden">
                   <div className="flex items-center justify-between mb-4 border-b border-emerald-100 pb-3">
                     <div className="flex items-center gap-2">
@@ -230,7 +266,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
 
             {/* 4 Key Highlights / Tính năng Cốt lõi */}
             <div className="scroll-mt-24 pt-12 mt-14 border-t border-slate-200/70" id="features">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
+              <div className="eco-reveal flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
                 <div>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-[11px] font-bold uppercase tracking-wider mb-1.5">Tính năng cốt lõi</span>
                   <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Chọn tính năng để xem trực tiếp trên trang chủ</h2>
@@ -244,7 +280,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
                     <div
                       key={idx}
                       onClick={() => openFeatureShowcase(c.page)}
-                      className={`cursor-pointer bg-white rounded-2xl p-5 border transition-all flex flex-col justify-between gap-3 group ${
+                      className={`eco-reveal eco-delay-${idx + 1} cursor-pointer bg-white rounded-2xl p-5 border transition-all flex flex-col justify-between gap-3 group ${
                         isSelected
                           ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-elevated'
                           : 'border-slate-200/80 shadow-card hover:shadow-lg hover:border-brand-300'
@@ -281,13 +317,13 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
         {/* Interactive Dashboard Showcase Section */}
         <section className="scroll-mt-24 py-16 bg-gradient-to-b from-sky-50/75 via-slate-50/85 to-emerald-50/45 border-t border-sky-100" id="dashboard">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-10">
+            <div className="eco-reveal text-center max-w-3xl mx-auto mb-10">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-bold uppercase tracking-wider mb-2">Trải nghiệm Thực tế</div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Bảng điều khiển Trung tâm Điều hành Toàn diện</h2>
               <p className="text-slate-600 text-sm sm:text-base mt-2">Chọn từng phân hệ ở menu bên trái để xem mô phỏng trực tiếp ngay tại đây hoặc mở không gian làm việc SQLite đầy đủ.</p>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="eco-reveal eco-delay-1 bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
                 <aside className="lg:col-span-3 xl:col-span-2 bg-slate-900 text-slate-300 p-4 flex flex-col justify-between border-r border-slate-800">
                   <div>
@@ -529,16 +565,16 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
         {/* Value Proposition Section */}
         <section className="scroll-mt-24 py-16 bg-white" id="benefits">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-chart-pie"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Tối ưu chi phí đến 22%</h3><p className="text-slate-600 text-sm mb-4">Cắt giảm quãng đường rỗng, loại bỏ vi phạm giờ cấm tải và tối ưu vòng quay tồn kho SMEs.</p></div>
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-seedling"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Chuẩn hóa Báo cáo ESG</h3><p className="text-slate-600 text-sm mb-4">Tự động hạch toán phát thải CO₂ chuẩn GHG Protocol Scope 1, xuất báo cáo PDF & Excel đa sheet.</p></div>
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-microchip"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Triển khai Nhanh trong 24h</h3><p className="text-slate-600 text-sm mb-4">Quy trình Onboarding 3 bước, cấu hình linh hoạt cho biến động giá xăng & thuế Carbon.</p></div>
+            <div className="eco-reveal eco-delay-1 eco-card-glow p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-chart-pie"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Tối ưu chi phí đến 22%</h3><p className="text-slate-600 text-sm mb-4">Cắt giảm quãng đường rỗng, loại bỏ vi phạm giờ cấm tải và tối ưu vòng quay tồn kho SMEs.</p></div>
+            <div className="eco-reveal eco-delay-2 eco-card-glow p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-seedling"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Chuẩn hóa Báo cáo ESG</h3><p className="text-slate-600 text-sm mb-4">Tự động hạch toán phát thải CO₂ chuẩn GHG Protocol Scope 1, xuất báo cáo PDF & Excel đa sheet.</p></div>
+            <div className="eco-reveal eco-delay-3 eco-card-glow p-8 rounded-3xl bg-slate-50 border border-slate-100"><div className="w-12 h-12 rounded-2xl bg-emerald-100 text-brand-700 flex items-center justify-center text-xl mb-5"><i className="fa-solid fa-microchip"></i></div><h3 className="text-xl font-bold text-slate-900 mb-3">Triển khai Nhanh trong 24h</h3><p className="text-slate-600 text-sm mb-4">Quy trình Onboarding 3 bước, cấu hình linh hoạt cho biến động giá xăng & thuế Carbon.</p></div>
           </div>
         </section>
 
         {/* Pricing Section (Module 01 Requirement) */}
         <section className="scroll-mt-24 py-16 bg-gradient-to-b from-white via-sky-50/50 to-emerald-50/35 border-t border-sky-100" id="pricing">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
+            <div className="eco-reveal text-center mb-10">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Bảng giá Dịch vụ SaaS Cho Doanh nghiệp SMEs</h2>
               <p className="text-sm text-slate-600 mt-2">Chi phí tối ưu, hoàn vốn chỉ sau 3 – 5 tháng vận hành.</p>
             </div>
@@ -548,7 +584,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
                 { name: 'Gói Tăng Trưởng Green', price: '3.8M', unit: 'đ/tháng', desc: '4–15 xe • LightGBM 30–90 ngày • Xuất ESG PDF/Excel', rec: true },
                 { name: 'Gói Doanh Nghiệp', price: '8.5M', unit: 'đ/tháng', desc: 'Không giới hạn xe & kho • Multi-Agent API riêng • 24/7', rec: false }
               ].map((pkg, idx) => (
-                <div key={idx} className={`rounded-3xl p-7 bg-white border ${pkg.rec ? 'border-2 border-brand-600 shadow-elevated relative' : 'border-slate-200 shadow-card'}`}>
+                <div key={idx} className={`eco-reveal eco-delay-${idx + 1} eco-card-glow rounded-3xl p-7 bg-white border ${pkg.rec ? 'border-2 border-brand-600 shadow-elevated relative' : 'border-slate-200 shadow-card'}`}>
                   {pkg.rec && <span className="absolute -top-3 left-6 bg-brand-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Phổ biến nhất</span>}
                   <div className="text-xs font-bold text-slate-500 uppercase">{pkg.name}</div>
                   <div className="text-3xl font-black text-slate-900 my-3">{pkg.price} <span className="text-sm font-medium text-slate-500">{pkg.unit}</span></div>
@@ -563,7 +599,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
         {/* FAQ & Contact Section (Module 01 Requirement) */}
         <section className="scroll-mt-24 py-16 bg-white border-t border-slate-200" id="contact">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <div className="lg:col-span-6 space-y-4">
+            <div className="eco-reveal eco-delay-1 lg:col-span-6 space-y-4">
               <h3 className="text-2xl font-extrabold text-slate-900">Câu hỏi thường gặp (FAQ)</h3>
               {[
                 { q: 'Hệ thống có sử dụng dữ liệu và thuật toán thực tế không?', a: 'Có. EcoLogix AI chạy LightGBM 4.7.0 dự báo nhu cầu, giải thuật CVRPTW 2-Opt né giờ cấm tải nội đô và lưu trữ trên 24 bảng quan hệ SQLite.' },
@@ -580,7 +616,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
               ))}
             </div>
 
-            <div className="lg:col-span-6 bg-gradient-to-br from-sky-50/70 via-white to-emerald-50/50 p-7 rounded-3xl border border-sky-100">
+            <div className="eco-reveal eco-delay-2 lg:col-span-6 bg-gradient-to-br from-sky-50/70 via-white to-emerald-50/50 p-7 rounded-3xl border border-sky-100">
               <h3 className="text-xl font-extrabold text-slate-900 mb-2">Đặt lịch Tư vấn & Dùng thử 1-1</h3>
               <p className="text-xs text-slate-500 mb-4">Yêu cầu sẽ được gửi trực tiếp vào Trung tâm Thông báo của hệ thống.</p>
               <form onSubmit={sendContact} className="space-y-3">
