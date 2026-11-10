@@ -1,0 +1,101 @@
+﻿id,name,district,province,lat,lng,demand_kg,time_window_start,time_window_end,time_window_label,is_urban_restricted,is_peak_hour_risk,priority
+DELIV-001,Đại lý Tạp hóa & Bách hóa Q1 #01,Quận 1,TP.HCM,10.765474,106.700975,220,07:30,11:30,Sáng sớm,True,False,Tiêu chuẩn
+DELIV-002,Đại lý Tạp hóa & Bách hóa Q1 #02,Quận 1,TP.HCM,10.788744,106.704545,150,18:30,21:30,Tối,True,False,Linh hoạt
+DELIV-003,Đại lý Tạp hóa & Bách hóa Q1 #03,Quận 1,TP.HCM,10.769098,106.704326,55,16:00,18:00,Chiều tan tầm,True,True,Cao (Hàng dễ hỏng)
+DELIV-004,Đại lý Tạp hóa & Bách hóa Q1 #04,Quận 1,TP.HCM,10.77539,106.710343,180,16:00,18:00,Chiều tan tầm,True,True,Tiêu chuẩn
+DELIV-005,Đại lý Tạp hóa & Bách hóa Q1 #05,Quận 1,TP.HCM,10.773817,106.69633,120,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-006,Đại lý Tạp hóa & Bách hóa Q1 #06,Quận 1,TP.HCM,10.783593,106.68859,220,16:00,18:00,Chiều tan tầm,True,True,Tiêu chuẩn
+DELIV-007,Đại lý Tạp hóa & Bách hóa Q1 #07,Quận 1,TP.HCM,10.775623,106.712194,260,16:00,18:00,Chiều tan tầm,True,True,Cao (Hàng dễ hỏng)
+DELIV-008,Đại lý Tạp hóa & Bách hóa Q1 #08,Quận 1,TP.HCM,10.787334,106.696965,180,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-009,Đại lý Tạp hóa & Bách hóa Q1 #09,Quận 1,TP.HCM,10.773863,106.703472,180,07:30,11:30,Sáng sớm,True,False,Linh hoạt
+DELIV-010,Đại lý Tạp hóa & Bách hóa Q1 #10,Quận 1,TP.HCM,10.777091,106.708404,260,18:30,21:30,Tối,True,False,Linh hoạt
+DELIV-011,Đại lý Tạp hóa & Bách hóa Q1 #11,Quận 1,TP.HCM,10.789403,106.693659,150,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-012,Đại lý Tạp hóa & Bách hóa Q1 #12,Quận 1,TP.HCM,10.779165,106.708875,40,07:30,11:30,Sáng sớm,True,False,Linh hoạt
+DELIV-013,Siêu thị Mini Tiện lợi Q3 #01,Quận 3,TP.HCM,10.781901,106.686663,85,07:30,11:30,Sáng sớm,True,False,Linh hoạt
+DELIV-014,Siêu thị Mini Tiện lợi Q3 #02,Quận 3,TP.HCM,10.788029,106.693636,220,16:00,18:00,Chiều tan tầm,True,True,Linh hoạt
+DELIV-015,Siêu thị Mini Tiện lợi Q3 #03,Quận 3,TP.HCM,10.787893,106.681429,220,18:30,21:30,Tối,True,False,Linh hoạt
+DELIV-016,Siêu thị Mini Tiện lợi Q3 #04,Quận 3,TP.HCM,10.780792,106.681031,100,07:30,11:30,Sáng sớm,True,False,Cao (Hàng dễ hỏng)
+DELIV-017,Siêu thị Mini Tiện lợi Q3 #05,Quận 3,TP.HCM,10.772295,106.698661,180,18:30,21:30,Tối,True,False,Tiêu chuẩn
+DELIV-018,Siêu thị Mini Tiện lợi Q3 #06,Quận 3,TP.HCM,10.795445,106.680003,180,18:30,21:30,Tối,True,False,Linh hoạt
+DELIV-019,Siêu thị Mini Tiện lợi Q3 #07,Quận 3,TP.HCM,10.792039,106.688935,40,16:00,18:00,Chiều tan tầm,True,True,Tiêu chuẩn
+DELIV-020,Siêu thị Mini Tiện lợi Q3 #08,Quận 3,TP.HCM,10.78153,106.696557,180,16:00,18:00,Chiều tan tầm,True,True,Linh hoạt
+DELIV-021,Siêu thị Mini Tiện lợi Q3 #09,Quận 3,TP.HCM,10.795459,106.677691,150,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-022,Siêu thị Mini Tiện lợi Q3 #10,Quận 3,TP.HCM,10.787256,106.699298,120,07:30,11:30,Sáng sớm,True,False,Tiêu chuẩn
+DELIV-023,Nhà thuốc & Tiệm tạp hóa Q5 #01,Quận 5,TP.HCM,10.762827,106.664239,180,07:30,11:30,Sáng sớm,True,False,Cao (Hàng dễ hỏng)
+DELIV-024,Nhà thuốc & Tiệm tạp hóa Q5 #02,Quận 5,TP.HCM,10.740406,106.669319,55,13:00,16:00,Đầu giờ chiều,True,False,Tiêu chuẩn
+DELIV-025,Nhà thuốc & Tiệm tạp hóa Q5 #03,Quận 5,TP.HCM,10.744025,106.65324,220,16:00,18:00,Chiều tan tầm,True,True,Tiêu chuẩn
+DELIV-026,Nhà thuốc & Tiệm tạp hóa Q5 #04,Quận 5,TP.HCM,10.745043,106.661303,260,18:30,21:30,Tối,True,False,Tiêu chuẩn
+DELIV-027,Nhà thuốc & Tiệm tạp hóa Q5 #05,Quận 5,TP.HCM,10.756774,106.66609,70,16:00,18:00,Chiều tan tầm,True,True,Cao (Hàng dễ hỏng)
+DELIV-028,Nhà thuốc & Tiệm tạp hóa Q5 #06,Quận 5,TP.HCM,10.752933,106.656704,70,16:00,18:00,Chiều tan tầm,True,True,Linh hoạt
+DELIV-029,Nhà thuốc & Tiệm tạp hóa Q5 #07,Quận 5,TP.HCM,10.752112,106.656356,85,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-030,Nhà thuốc & Tiệm tạp hóa Q5 #08,Quận 5,TP.HCM,10.769165,106.66358,55,07:30,11:30,Sáng sớm,True,False,Tiêu chuẩn
+DELIV-031,Cửa hàng phân phối Q10 #01,Quận 10,TP.HCM,10.776888,106.680236,40,07:30,11:30,Sáng sớm,True,False,Linh hoạt
+DELIV-032,Cửa hàng phân phối Q10 #02,Quận 10,TP.HCM,10.767333,106.66131,120,07:30,11:30,Sáng sớm,True,False,Linh hoạt
+DELIV-033,Cửa hàng phân phối Q10 #03,Quận 10,TP.HCM,10.785963,106.669349,70,13:00,16:00,Đầu giờ chiều,True,False,Tiêu chuẩn
+DELIV-034,Cửa hàng phân phối Q10 #04,Quận 10,TP.HCM,10.770508,106.662293,260,13:00,16:00,Đầu giờ chiều,True,False,Cao (Hàng dễ hỏng)
+DELIV-035,Cửa hàng phân phối Q10 #05,Quận 10,TP.HCM,10.773921,106.653225,70,07:30,11:30,Sáng sớm,True,False,Cao (Hàng dễ hỏng)
+DELIV-036,Cửa hàng phân phối Q10 #06,Quận 10,TP.HCM,10.771055,106.674841,85,18:30,21:30,Tối,True,False,Cao (Hàng dễ hỏng)
+DELIV-037,Cửa hàng phân phối Q10 #07,Quận 10,TP.HCM,10.761374,106.668098,220,13:00,16:00,Đầu giờ chiều,True,False,Tiêu chuẩn
+DELIV-038,Cửa hàng phân phối Q10 #08,Quận 10,TP.HCM,10.777337,106.65778,100,18:30,21:30,Tối,True,False,Linh hoạt
+DELIV-039,Điểm bán lẻ Thảo Điền #01,TP. Thủ Đức,TP.HCM,10.817241,106.731596,70,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-040,Điểm bán lẻ Thảo Điền #02,TP. Thủ Đức,TP.HCM,10.799103,106.735028,150,16:00,18:00,Chiều tan tầm,False,False,Linh hoạt
+DELIV-041,Điểm bán lẻ Thảo Điền #03,TP. Thủ Đức,TP.HCM,10.796509,106.73568,180,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-042,Điểm bán lẻ Thảo Điền #04,TP. Thủ Đức,TP.HCM,10.815685,106.745536,85,07:30,11:30,Sáng sớm,False,False,Cao (Hàng dễ hỏng)
+DELIV-043,Điểm bán lẻ Thảo Điền #05,TP. Thủ Đức,TP.HCM,10.817559,106.73947,150,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-044,Điểm bán lẻ Thảo Điền #06,TP. Thủ Đức,TP.HCM,10.801759,106.724803,220,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-045,Điểm bán lẻ Thảo Điền #07,TP. Thủ Đức,TP.HCM,10.809824,106.728514,260,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-046,Điểm bán lẻ Thảo Điền #08,TP. Thủ Đức,TP.HCM,10.808085,106.740209,70,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-047,Điểm bán lẻ Thảo Điền #09,TP. Thủ Đức,TP.HCM,10.794093,106.733182,55,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-048,Điểm bán lẻ Thảo Điền #10,TP. Thủ Đức,TP.HCM,10.812871,106.725665,55,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-049,Chuỗi bách hóa Linh Trung #01,TP. Thủ Đức,TP.HCM,10.868143,106.769417,120,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-050,Chuỗi bách hóa Linh Trung #02,TP. Thủ Đức,TP.HCM,10.858184,106.767916,100,18:30,21:30,Tối,False,False,Cao (Hàng dễ hỏng)
+DELIV-051,Chuỗi bách hóa Linh Trung #03,TP. Thủ Đức,TP.HCM,10.852219,106.774557,100,07:30,11:30,Sáng sớm,False,False,Cao (Hàng dễ hỏng)
+DELIV-052,Chuỗi bách hóa Linh Trung #04,TP. Thủ Đức,TP.HCM,10.871075,106.784794,120,16:00,18:00,Chiều tan tầm,False,False,Linh hoạt
+DELIV-053,Chuỗi bách hóa Linh Trung #05,TP. Thủ Đức,TP.HCM,10.868718,106.787142,260,07:30,11:30,Sáng sớm,False,False,Linh hoạt
+DELIV-054,Chuỗi bách hóa Linh Trung #06,TP. Thủ Đức,TP.HCM,10.859982,106.773969,180,18:30,21:30,Tối,False,False,Cao (Hàng dễ hỏng)
+DELIV-055,Chuỗi bách hóa Linh Trung #07,TP. Thủ Đức,TP.HCM,10.871094,106.793339,100,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-056,Chuỗi bách hóa Linh Trung #08,TP. Thủ Đức,TP.HCM,10.878912,106.77819,150,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-057,Chuỗi bách hóa Linh Trung #09,TP. Thủ Đức,TP.HCM,10.871359,106.776187,55,16:00,18:00,Chiều tan tầm,False,False,Linh hoạt
+DELIV-058,Chuỗi bách hóa Linh Trung #10,TP. Thủ Đức,TP.HCM,10.860066,106.794589,220,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-059,Tổng kho Bán lẻ Bình Tân #01,Bình Tân,TP.HCM,10.747426,106.61185,55,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-060,Tổng kho Bán lẻ Bình Tân #02,Bình Tân,TP.HCM,10.734148,106.59397,120,16:00,18:00,Chiều tan tầm,False,False,Cao (Hàng dễ hỏng)
+DELIV-061,Tổng kho Bán lẻ Bình Tân #03,Bình Tân,TP.HCM,10.743343,106.593989,150,18:30,21:30,Tối,False,False,Linh hoạt
+DELIV-062,Tổng kho Bán lẻ Bình Tân #04,Bình Tân,TP.HCM,10.737779,106.60283,85,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-063,Tổng kho Bán lẻ Bình Tân #05,Bình Tân,TP.HCM,10.746888,106.610047,220,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-064,Tổng kho Bán lẻ Bình Tân #06,Bình Tân,TP.HCM,10.754198,106.597048,40,16:00,18:00,Chiều tan tầm,False,False,Linh hoạt
+DELIV-065,Tổng kho Bán lẻ Bình Tân #07,Bình Tân,TP.HCM,10.743136,106.618954,70,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-066,Tổng kho Bán lẻ Bình Tân #08,Bình Tân,TP.HCM,10.747189,106.609706,220,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-067,Cửa hàng tiện ích Gò Vấp #01,Gò Vấp,TP.HCM,10.84279,106.672936,120,07:30,11:30,Sáng sớm,False,False,Cao (Hàng dễ hỏng)
+DELIV-068,Cửa hàng tiện ích Gò Vấp #02,Gò Vấp,TP.HCM,10.842636,106.657584,40,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-069,Cửa hàng tiện ích Gò Vấp #03,Gò Vấp,TP.HCM,10.851617,106.677481,150,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-070,Cửa hàng tiện ích Gò Vấp #04,Gò Vấp,TP.HCM,10.840648,106.658573,85,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-071,Cửa hàng tiện ích Gò Vấp #05,Gò Vấp,TP.HCM,10.837578,106.664027,180,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-072,Cửa hàng tiện ích Gò Vấp #06,Gò Vấp,TP.HCM,10.828549,106.662616,180,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-073,Cửa hàng tiện ích Gò Vấp #07,Gò Vấp,TP.HCM,10.848213,106.675352,150,07:30,11:30,Sáng sớm,False,False,Tiêu chuẩn
+DELIV-074,Cửa hàng tiện ích Gò Vấp #08,Gò Vấp,TP.HCM,10.826326,106.661484,100,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-075,Đại lý phân phối Tân Mai #01,Biên Hòa,Đồng Nai,10.972364,106.828251,85,16:00,18:00,Chiều tan tầm,False,False,Cao (Hàng dễ hỏng)
+DELIV-076,Đại lý phân phối Tân Mai #02,Biên Hòa,Đồng Nai,10.971066,106.839117,220,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-077,Đại lý phân phối Tân Mai #03,Biên Hòa,Đồng Nai,10.944966,106.849677,120,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-078,Đại lý phân phối Tân Mai #04,Biên Hòa,Đồng Nai,10.943648,106.845482,85,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-079,Đại lý phân phối Tân Mai #05,Biên Hòa,Đồng Nai,10.951259,106.836267,70,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-080,Đại lý phân phối Tân Mai #06,Biên Hòa,Đồng Nai,10.971684,106.846595,260,18:30,21:30,Tối,False,False,Linh hoạt
+DELIV-081,Đại lý phân phối Tân Mai #07,Biên Hòa,Đồng Nai,10.95307,106.850871,220,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
+DELIV-082,Đại lý phân phối Tân Mai #08,Biên Hòa,Đồng Nai,10.947789,106.843873,70,07:30,11:30,Sáng sớm,False,False,Cao (Hàng dễ hỏng)
+DELIV-083,Kho vệ tinh KCN Amata #01,Biên Hòa,Đồng Nai,10.94275,106.89477,40,16:00,18:00,Chiều tan tầm,False,False,Cao (Hàng dễ hỏng)
+DELIV-084,Kho vệ tinh KCN Amata #02,Biên Hòa,Đồng Nai,10.93834,106.874786,70,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-085,Kho vệ tinh KCN Amata #03,Biên Hòa,Đồng Nai,10.930488,106.878089,55,07:30,11:30,Sáng sớm,False,False,Linh hoạt
+DELIV-086,Kho vệ tinh KCN Amata #04,Biên Hòa,Đồng Nai,10.935177,106.877345,55,16:00,18:00,Chiều tan tầm,False,False,Linh hoạt
+DELIV-087,Kho vệ tinh KCN Amata #05,Biên Hòa,Đồng Nai,10.954585,106.871928,220,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-088,Kho vệ tinh KCN Amata #06,Biên Hòa,Đồng Nai,10.947806,106.881978,260,16:00,18:00,Chiều tan tầm,False,False,Cao (Hàng dễ hỏng)
+DELIV-089,Cửa hàng tổng hợp Long Thành #01,Long Thành,Đồng Nai,10.780271,106.968064,180,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-090,Cửa hàng tổng hợp Long Thành #02,Long Thành,Đồng Nai,10.800799,106.945581,120,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-091,Cửa hàng tổng hợp Long Thành #03,Long Thành,Đồng Nai,10.787881,106.965743,180,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-092,Cửa hàng tổng hợp Long Thành #04,Long Thành,Đồng Nai,10.783502,106.962991,85,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-093,Cửa hàng tổng hợp Long Thành #05,Long Thành,Đồng Nai,10.790491,106.962897,150,13:00,16:00,Đầu giờ chiều,False,False,Tiêu chuẩn
+DELIV-094,Cửa hàng tổng hợp Long Thành #06,Long Thành,Đồng Nai,10.79145,106.955797,70,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-095,Trạm trung chuyển Nhơn Trạch #01,Nhơn Trạch,Đồng Nai,10.719869,106.880535,100,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-096,Trạm trung chuyển Nhơn Trạch #02,Nhơn Trạch,Đồng Nai,10.714361,106.895806,85,16:00,18:00,Chiều tan tầm,False,False,Tiêu chuẩn
+DELIV-097,Trạm trung chuyển Nhơn Trạch #03,Nhơn Trạch,Đồng Nai,10.726839,106.880697,100,18:30,21:30,Tối,False,False,Linh hoạt
+DELIV-098,Trạm trung chuyển Nhơn Trạch #04,Nhơn Trạch,Đồng Nai,10.721984,106.893492,120,18:30,21:30,Tối,False,False,Tiêu chuẩn
+DELIV-099,Trạm trung chuyển Nhơn Trạch #05,Nhơn Trạch,Đồng Nai,10.71285,106.900015,180,13:00,16:00,Đầu giờ chiều,False,False,Linh hoạt
+DELIV-100,Trạm trung chuyển Nhơn Trạch #06,Nhơn Trạch,Đồng Nai,10.720565,106.886913,150,13:00,16:00,Đầu giờ chiều,False,False,Cao (Hàng dễ hỏng)
