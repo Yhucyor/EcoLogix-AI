@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>EcoLogix AI - Nền tảng Multi-Agent AI Tối ưu chuỗi cung ứng & Logistics xanh</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=2" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192x192.png?v=2" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/assets/favicon-192x192.png?v=2" />
+  <link rel="shortcut icon" href="/favicon.ico?v=2" />
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+  <!-- Tailwind CSS v3 with Plugins -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              dark: '#0f172a',
+            },
+            primary: '#07965B',
+            'primary-dark': '#064E43',
+            'primary-light': '#E8F7EF',
+            canvas: '#F5F8F7',
+            'text-main': '#172B27',
+            'text-sub': '#71817C',
+            'border-light': '#E5EAE8'
+          },
+          boxShadow: {
+            'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)',
+            'elevated': '0 20px 40px -15px rgba(16, 185, 129, 0.15)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 12% 10%, rgba(186, 230, 253, 0.42) 0%, transparent 42%),
+                  radial-gradient(circle at 88% 85%, rgba(167, 243, 208, 0.32) 0%, transparent 45%),
+                  linear-gradient(135deg, #F0F9FF 0%, #F5F8F7 50%, #ECFDF5 100%);
+      background-attachment: fixed;
+      color: #1E293B;
+      overflow-x: hidden;
+    }
+    .eco-sky-canvas {
+      background: radial-gradient(circle at 15% 12%, rgba(186, 230, 253, 0.38) 0%, transparent 45%),
+                  radial-gradient(circle at 85% 88%, rgba(167, 243, 208, 0.28) 0%, transparent 48%),
+                  linear-gradient(145deg, #F0F9FF 0%, #F5F8F7 52%, #ECFDF5 100%);
+    }
+    .eco-gradient-bg { background: linear-gradient(135deg, #059669 0%, #10B981 100%); }
+    .pulse-dot { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    /* Sidebar & Workspace đồng bộ trang index + quầng sáng nhẹ theo con trỏ chuột */
+    .eco-sidebar-surface {
+      background: radial-gradient(circle at 0% 0%, rgba(186, 230, 253, 0.45) 0%, transparent 55%),
+                  radial-gradient(circle at 100% 100%, rgba(167, 243, 208, 0.38) 0%, transparent 55%),
+                  linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 249, 255, 0.92) 52%, rgba(236, 253, 245, 0.95) 100%);
+      backdrop-filter: blur(18px);
+    }
+    .eco-sidebar-surface::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: radial-gradient(46px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.16), rgba(56, 189, 248, 0.11) 45%, transparent 72%);
+      z-index: 0;
+    }
+    .eco-sidebar-surface:hover::before { opacity: 1; }
+    .eco-sidebar-surface > * { position: relative; z-index: 1; }
+
+    .eco-nav-item {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid transparent;
+      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .eco-nav-item::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+      background: radial-gradient(36px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.26), rgba(56, 189, 248, 0.14) 48%, transparent 75%);
+      z-index: 0;
+    }
+    .eco-nav-item:hover::before { opacity: 1; }
+    .eco-nav-item > * { position: relative; z-index: 1; }
+    .eco-nav-item:hover {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(16, 185, 129, 0.26);
+      color: #047857;
+      transform: translateX(3px);
+      box-shadow: 0 2px 10px -2px rgba(16, 185, 129, 0.16);
+    }
+    .eco-nav-item-active {
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+      color: #FFFFFF !important;
+      border-color: rgba(16, 185, 129, 0.42);
+      box-shadow: 0 6px 16px -4px rgba(16, 185, 129, 0.36);
+    }
+    .eco-nav-item-active::before {
+      background: radial-gradient(34px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.30), rgba(186, 230, 253, 0.14) 48%, transparent 75%);
+    }
+    .eco-nav-item-active:hover {
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+      color: #FFFFFF !important;
+      transform: translateX(3px);
+      box-shadow: 0 6px 18px -4px rgba(16, 185, 129, 0.42);
+    }
+
+    .eco-card-glow {
+      position: relative;
+      transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .eco-card-glow::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: radial-gradient(56px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.16), rgba(56, 189, 248, 0.10) 45%, transparent 72%);
+      z-index: 1;
+    }
+    .eco-card-glow:hover::before { opacity: 1; }
+    .eco-card-glow:hover {
+      border-color: rgba(16, 185, 129, 0.32) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -8px rgba(15, 23, 42, 0.08);
+    }
+    /* Hiệu ứng cuộn mượt từng phần ở trang index */
+    .eco-reveal {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+    .eco-reveal.eco-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .eco-delay-1 { transition-delay: 80ms; }
+    .eco-delay-2 { transition-delay: 160ms; }
+    .eco-delay-3 { transition-delay: 240ms; }
+    .eco-delay-4 { transition-delay: 320ms; }
+    @media (prefers-reduced-motion: reduce) {
+      .eco-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    }
+    /* Bảo vệ Leaflet tiles, controls & markers khỏi Tailwind Preflight / @tailwindcss/forms */
+    .leaflet-container { z-index: 1; font-family: 'Plus Jakarta Sans', sans-serif !important; background: #E2E8F0; }
+    .leaflet-container img,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow { max-width: none !important; max-height: none !important; }
+    .leaflet-control-layers-selector { appearance: auto !important; width: auto !important; height: auto !important; }
+    .eco-map-toner .leaflet-tile-pane { filter: grayscale(100%) contrast(155%) brightness(98%); }
+    .eco-pin-icon { background: transparent; border: none; }
+  </style>
+</head>
+<body class="antialiased text-slate-800">
+
+  <div id="root">
+    <div class="min-h-screen eco-sky-canvas flex flex-col items-center justify-center p-6 text-center">
+      <img src="/assets/ecologix-logo.png?v=2" alt="EcoLogix AI" class="w-16 h-16 object-contain mb-4 animate-pulse" />
+      <div class="text-base font-extrabold text-brand-900">Đang khởi tạo EcoLogix AI...</div>
+      <div class="text-xs text-slate-500 mt-1">Đang tải các mô-đun giao diện từ /pages & /components</div>
+    </div>
+  </div>
+
+  <script>
+    (async function loadEcoModules() {
+      const modules = [
+        '/components/common.jsx?v=5',
+        '/components/EcoLeafletMap.jsx?v=5',
+        '/pages/OnboardingPage.jsx?v=5',
+        '/pages/LoginPage.jsx?v=5',
+        '/pages/LandingPage.jsx?v=6',
+        '/pages/DashboardPage.jsx?v=5',
+        '/pages/InventoryPage.jsx?v=5',
+        '/pages/ForecastingPage.jsx?v=5',
+        '/pages/OrdersPage.jsx?v=5',
+        '/pages/RoutingPage.jsx?v=5',
+        '/pages/VehiclesPage.jsx?v=5',
+        '/pages/PartnersPage.jsx?v=5',
+        '/pages/AiAssistantPage.jsx?v=5',
+        '/pages/ReportsPage.jsx?v=5',
+        '/pages/NotificationsPage.jsx?v=5',
+        '/pages/SettingsPage.jsx?v=5',
+        '/pages/MobileDemoPage.jsx?v=5',
+        '/pages/App.jsx?v=5',
+      ];
+      if (!window.__ecoPointerGlowBound) {
+        window.__ecoPointerGlowBound = true;
+        document.addEventListener('pointermove', (e) => {
+          const target = e.target && e.target.closest ? e.target : null;
+          if (!target) return;
+          for (const sel of ['.eco-sidebar-surface', '.eco-nav-item', '.eco-card-glow']) {
+            const el = target.closest(sel);
+            if (el) {
+              const r = el.getBoundingClientRect();
+              el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+              el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+            }
+          }
+        }, { passive: true });
+      }
+      try {
+        const fetched = await Promise.all(
+          modules.map(async (url) => {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' khi tải ' + url);
+            return { url, code: await res.text() };
+          })
+        );
+        for (const mod of fetched) {
+          const compiled = Babel.transform(mod.code, {
+            presets: [['react', { runtime: 'classic' }]],
+            filename: mod.url,
+          }).code;
+          if (/^\s*import\s+/m.test(compiled)) {
+            throw new Error(mod.url + ' compiled with unexpected import statement');
+          }
+          try {
+            (0, eval)('(function(){\n' + compiled + '\n})();\n//# sourceURL=' + mod.url);
+          } catch (modErr) {
+            throw new Error(mod.url + ': ' + (modErr && modErr.message ? modErr.message : modErr));
+          }
+        }
+      } catch (err) {
+        console.error('Module Bootstrap Error:', err);
+        document.getElementById('root').innerHTML =
+          '<div style="max-width:640px;margin:60px auto;padding:24px;background:#fff;border:1px solid #fecaca;border-radius:16px;font-family:sans-serif;color:#991b1b;">' +
+          '<h3 style="margin-top:0">Không thể khởi chạy module giao diện</h3>' +
+          '<pre style="white-space:pre-wrap;font-size:12px;">' + (err && err.message ? err.message : err) + '</pre></div>';
+      }
+    })();
+  </script>
+</body>
+</html>
