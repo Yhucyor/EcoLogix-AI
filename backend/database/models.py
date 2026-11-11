@@ -2,14 +2,14 @@
 EcoLogix AI - Database Schema DDL & Lightweight Migration
 Khởi tạo đầy đủ 24 bảng nghiệp vụ liên kết chặt chẽ, thiết kế sẵn sàng mở rộng sang PostgreSQL.
 """
-from backend.database.connection import get_db
+from backend.database.connection import get_db, get_db_dialect
 
 SCHEMA_SQL = """
 -- 1. COMPANIES
 CREATE TABLE IF NOT EXISTS companies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    tax_code TEXT UNIQUE,
+    tax_code VARCHAR(100) UNIQUE,
     industry TEXT,
     size TEXT,
     address TEXT,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS companies (
 -- 2. ROLES
 CREATE TABLE IF NOT EXISTS roles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     permissions TEXT
 );
@@ -32,13 +32,14 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
     name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
+    email VARCHAR(191) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'Manager',
+    role VARCHAR(64) DEFAULT 'Manager',
     avatar_url TEXT,
     phone TEXT,
     is_verified INTEGER DEFAULT 1,
-    reset_token TEXT,
+    has_company INTEGER DEFAULT 1,
+    reset_token VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(company_id) REFERENCES companies(id)
 );
@@ -48,7 +49,7 @@ CREATE TABLE IF NOT EXISTS warehouses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
     name TEXT NOT NULL,
-    code TEXT UNIQUE,
+    code VARCHAR(100) UNIQUE,
     address TEXT,
     lat REAL,
     lng REAL,
@@ -62,7 +63,7 @@ CREATE TABLE IF NOT EXISTS warehouses (
 CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
-    sku TEXT UNIQUE NOT NULL,
+    sku VARCHAR(100) UNIQUE NOT NULL,
     name TEXT NOT NULL,
     category TEXT,
     unit TEXT,
@@ -113,7 +114,7 @@ CREATE TABLE IF NOT EXISTS customers (
     province TEXT,
     lat REAL,
     lng REAL,
-    customer_tier TEXT DEFAULT 'Standard',
+    customer_tier VARCHAR(64) DEFAULT 'Standard',
     total_spent REAL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(company_id) REFERENCES companies(id)
@@ -137,14 +138,14 @@ CREATE TABLE IF NOT EXISTS suppliers (
 CREATE TABLE IF NOT EXISTS vehicles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
-    plate_number TEXT UNIQUE NOT NULL,
+    plate_number VARCHAR(64) UNIQUE NOT NULL,
     vehicle_name TEXT NOT NULL,
     vehicle_type TEXT,
     max_load_kg REAL,
     fuel_type TEXT,
     fuel_consumption_per_100km REAL,
     operational_cost_per_km REAL,
-    status TEXT DEFAULT 'Available', -- 'Available', 'In Transit', 'Maintenance'
+    status VARCHAR(64) DEFAULT 'Available', -- 'Available', 'In Transit', 'Maintenance'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(company_id) REFERENCES companies(id)
 );
@@ -153,10 +154,10 @@ CREATE TABLE IF NOT EXISTS vehicles (
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
-    order_code TEXT UNIQUE NOT NULL,
+    order_code VARCHAR(100) UNIQUE NOT NULL,
     customer_id INTEGER,
     warehouse_id INTEGER,
-    status TEXT DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'SHIPPING', 'COMPLETED', 'CANCELLED'
+    status VARCHAR(64) DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'SHIPPING', 'COMPLETED', 'CANCELLED'
     total_weight_kg REAL,
     total_amount REAL,
     shipping_fee REAL,
@@ -183,10 +184,10 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- 13. ROUTES
 CREATE TABLE IF NOT EXISTS routes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    route_code TEXT UNIQUE NOT NULL,
+    route_code VARCHAR(100) UNIQUE NOT NULL,
     vehicle_id INTEGER,
     route_date DATE,
-    status TEXT DEFAULT 'Optimized',
+    status VARCHAR(64) DEFAULT 'Optimized',
     total_distance_km REAL,
     baseline_distance_km REAL DEFAULT 0,
     saved_distance_km REAL DEFAULT 0,
@@ -230,7 +231,7 @@ CREATE TABLE IF NOT EXISTS forecasts (
     safety_stock INTEGER DEFAULT 0,
     reorder_point INTEGER DEFAULT 0,
     accuracy_pct REAL DEFAULT 94.0,
-    model_name TEXT DEFAULT 'LightGBM Regressor',
+    model_name VARCHAR(128) DEFAULT 'LightGBM Regressor',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(product_id) REFERENCES products(id)
 );
@@ -238,11 +239,11 @@ CREATE TABLE IF NOT EXISTS forecasts (
 -- 16. AI AGENTS
 CREATE TABLE IF NOT EXISTS ai_agents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    agent_name TEXT UNIQUE NOT NULL,
+    agent_name VARCHAR(128) UNIQUE NOT NULL,
     role TEXT NOT NULL,
     description TEXT,
-    model_name TEXT DEFAULT 'EcoLogix-Agentic-LLM',
-    status TEXT DEFAULT 'Active'
+    model_name VARCHAR(128) DEFAULT 'EcoLogix-Agentic-LLM',
+    status VARCHAR(64) DEFAULT 'Active'
 );
 
 -- 17. AI CONVERSATIONS
@@ -285,7 +286,7 @@ CREATE TABLE IF NOT EXISTS carbon_emissions (
     co2_kg REAL,
     fuel_liters REAL,
     calculation_date DATE,
-    standard TEXT DEFAULT 'GHG Protocol Scope 1',
+    standard VARCHAR(128) DEFAULT 'GHG Protocol Scope 1',
     FOREIGN KEY(route_id) REFERENCES routes(id)
 );
 
@@ -309,7 +310,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     user_id INTEGER,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
-    type TEXT DEFAULT 'info', -- 'info', 'warning', 'success', 'danger'
+    type VARCHAR(64) DEFAULT 'info', -- 'info', 'warning', 'success', 'danger'
     is_read INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
@@ -319,7 +320,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS system_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER,
-    setting_key TEXT NOT NULL,
+    setting_key VARCHAR(191) NOT NULL,
     setting_value TEXT NOT NULL,
     description TEXT,
     FOREIGN KEY(company_id) REFERENCES companies(id),
@@ -340,31 +341,57 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 """
 
 
-def _ensure_column(cursor, table: str, column: str, definition: str):
+def _ensure_column(cursor, table: str, column: str, definition: str, dialect: str = "sqlite", existing_map: dict = None):
     """Thêm cột còn thiếu cho database hiện có mà không làm mất dữ liệu."""
-    cursor.execute(f"PRAGMA table_info({table});")
-    existing = {row[1] for row in cursor.fetchall()}
+    if existing_map is not None and table in existing_map:
+        existing = existing_map[table]
+    elif dialect == "mysql":
+        cursor.execute(
+            "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?;",
+            (table,),
+        )
+        existing = {row[0] for row in cursor.fetchall()}
+    else:
+        cursor.execute(f"PRAGMA table_info({table});")
+        existing = {row[1] for row in cursor.fetchall()}
     if column not in existing:
         cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition};")
 
 
 def init_database():
-    """Khởi tạo toàn bộ 24 bảng và nâng cấp cột bổ sung an toàn."""
+    """Khởi tạo toàn bộ 24 bảng và nâng cấp cột bổ sung an toàn (SQLite & TiDB)."""
+    dialect = get_db_dialect()
+    ddl = SCHEMA_SQL if dialect == "sqlite" else SCHEMA_SQL.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "INT NOT NULL AUTO_INCREMENT PRIMARY KEY")
     with get_db() as conn:
-        conn.executescript(SCHEMA_SQL)
         cur = conn.cursor()
-        _ensure_column(cur, "users", "is_verified", "INTEGER DEFAULT 1")
-        _ensure_column(cur, "users", "reset_token", "TEXT")
-        _ensure_column(cur, "routes", "baseline_distance_km", "REAL DEFAULT 0")
-        _ensure_column(cur, "routes", "saved_distance_km", "REAL DEFAULT 0")
-        _ensure_column(cur, "routes", "fuel_saved_liters", "REAL DEFAULT 0")
-        _ensure_column(cur, "routes", "saved_co2_kg", "REAL DEFAULT 0")
-        _ensure_column(cur, "routes", "saved_cost_vnd", "REAL DEFAULT 0")
-        _ensure_column(cur, "forecasts", "horizon_days", "INTEGER DEFAULT 30")
-        _ensure_column(cur, "forecasts", "safety_stock", "INTEGER DEFAULT 0")
-        _ensure_column(cur, "forecasts", "reorder_point", "INTEGER DEFAULT 0")
-        _ensure_column(cur, "forecasts", "accuracy_pct", "REAL DEFAULT 94.0")
-    print("✅ Đã khởi tạo & đồng bộ schema 24 bảng dữ liệu cho EcoLogix AI.")
+        existing_map = None
+        if dialect == "mysql":
+            cur.execute("SELECT COUNT(*) AS cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();")
+            tbl_cnt = int(cur.fetchone()[0])
+            if tbl_cnt < 24:
+                conn.executescript(ddl)
+            cur.execute(
+                "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('users', 'routes', 'forecasts');"
+            )
+            existing_map = {"users": set(), "routes": set(), "forecasts": set()}
+            for r in cur.fetchall():
+                existing_map.setdefault(r[0], set()).add(r[1])
+        else:
+            conn.executescript(ddl)
+
+        _ensure_column(cur, "users", "is_verified", "INTEGER DEFAULT 1", dialect, existing_map)
+        _ensure_column(cur, "users", "has_company", "INTEGER DEFAULT 1", dialect, existing_map)
+        _ensure_column(cur, "users", "reset_token", "VARCHAR(255)" if dialect == "mysql" else "TEXT", dialect, existing_map)
+        _ensure_column(cur, "routes", "baseline_distance_km", "REAL DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "routes", "saved_distance_km", "REAL DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "routes", "fuel_saved_liters", "REAL DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "routes", "saved_co2_kg", "REAL DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "routes", "saved_cost_vnd", "REAL DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "forecasts", "horizon_days", "INTEGER DEFAULT 30", dialect, existing_map)
+        _ensure_column(cur, "forecasts", "safety_stock", "INTEGER DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "forecasts", "reorder_point", "INTEGER DEFAULT 0", dialect, existing_map)
+        _ensure_column(cur, "forecasts", "accuracy_pct", "REAL DEFAULT 94.0", dialect, existing_map)
+    print(f"✅ Đã khởi tạo & đồng bộ schema 24 bảng dữ liệu cho EcoLogix AI ({dialect}).")
 
 
 if __name__ == "__main__":

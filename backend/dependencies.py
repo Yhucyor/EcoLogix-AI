@@ -16,6 +16,7 @@ DEFAULT_DEMO_USER: Dict[str, Any] = {
     "email": "nguyen.van.a@ecologix.vn",
     "role": "Manager",
     "company_name": "EcoLogix Logistics (SME)",
+    "has_company": True,
     "permissions": ["ALL", "READ", "WRITE", "OPTIMIZE", "EXPORT", "SETTINGS", "FINANCIAL", "USERS"],
     "is_demo_fallback": True,
 }

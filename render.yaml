@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: ecologix-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python run.py
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Hệ thống sử dụng TiDB Cloud làm cơ sở dữ liệu bền vững ngay cả trên gói Render Free.
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: ECOLOGIX_SECRET_KEY
+        generateValue: true
+      - key: ECOLOGIX_STRICT_AUTH
+        value: "false"
+      - key: ECOLOGIX_CORS_ORIGINS
+        value: "*"
+      - key: ECOLOGIX_CONTACT_EMAIL
+        value: "geroolyhuicy@gmail.com"
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: TIDB_HOST
+        value: "gateway01.ap-northeast-1.prod.aws.tidbcloud.com"
+      - key: TIDB_PORT
+        value: "4000"
+      - key: TIDB_USER
+        sync: false
+      - key: TIDB_PASSWORD
+        sync: false
+      - key: TIDB_DATABASE
+        value: "ecologix"
+

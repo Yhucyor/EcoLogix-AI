@@ -1,19 +1,43 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 // ==================== 1. LANDING VIEW (CODE.HTML + PRICING + FAQ + CONTACT) ====================
-function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp, onAskAi, toast, showToast }) {
+function LandingView({ user, isAuthenticated = false, onLogin, onRegister, onOnboardingComplete, onGoApp, onAskAi, toast, showToast }) {
   const [simVehicle, setSimVehicle] = useState('truck');
   const [faqOpen, setFaqOpen] = useState(0);
   const [activeNav, setActiveNav] = useState('hero');
   const [activeShowcaseTab, setActiveShowcaseTab] = useState('dashboard');
   const CONSULTATION_EMAIL = 'geroolyhuicy@gmail.com';
   const [showStartModal, setShowStartModal] = useState(false);
+  const [showStartChoiceModal, setShowStartChoiceModal] = useState(false);
+  const [existingProjectCtx, setExistingProjectCtx] = useState(null);
+  const [editCompanyMode, setEditCompanyMode] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', contact: '', need: 'Dùng thử miễn phí 14 ngày', message: '' });
   const [contactSending, setContactSending] = useState(false);
   const [contactReceipt, setContactReceipt] = useState(null);
   const contactNameRef = useRef(null);
 
-  const openStartPopup = () => setShowStartModal(true);
+  const openStartPopup = async () => {
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : '';
+    let hasCompany = !!user?.has_company;
+    let ctx = hasCompany && user?.company_name ? { has_company: true, company: { name: user.company_name } } : null;
+
+    if (token) {
+      try {
+        const res = await apiFetch('/api/onboarding/current');
+        hasCompany = !!res?.has_company;
+        if (hasCompany) ctx = res;
+      } catch {}
+    }
+
+    if (hasCompany) {
+      setExistingProjectCtx(ctx);
+      setShowStartChoiceModal(true);
+    } else {
+      setEditCompanyMode(false);
+      setExistingProjectCtx(null);
+      setShowStartModal(true);
+    }
+  };
 
   const headerRef = useRef(null);
 
@@ -39,6 +63,15 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
     setActiveShowcaseTab(pageId);
     scrollToSection('dashboard');
   };
+
+  useEffect(() => {
+    if (!showStartChoiceModal) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowStartChoiceModal(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showStartChoiceModal]);
 
   useEffect(() => {
     const sectionIds = ['hero', 'features', 'dashboard', 'pricing', 'contact'];
@@ -483,7 +516,7 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
                               ],
                             }]}
                             showRestrictedZone={true}
-                            heightClass="h-[220px]"
+                            heightClass="h-[220px] sm:h-[260px]"
                             defaultTheme="osm"
                             openDepotPopup={false}
                           />
@@ -800,17 +833,109 @@ function LandingView({ user, onLogin, onRegister, onOnboardingComplete, onGoApp,
         </div>
       </footer>
 
+      {showStartChoiceModal && (
+        <div
+          onClick={() => setShowStartChoiceModal(false)}
+          className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg bg-white rounded-3xl border border-sky-100 shadow-2xl overflow-hidden my-auto"
+          >
+            <div className="relative bg-gradient-to-br from-sky-100/80 via-white to-emerald-50/85 px-6 pt-6 pb-5 border-b border-sky-100 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <BrandLogo sizeClass="w-11 h-11" className="shadow-brand-500/20" />
+                <div>
+                  <div className="flex items-baseline">
+                    <span className="text-xl font-bold tracking-tight text-slate-900">EcoLogix</span>
+                    <span className="text-xl font-extrabold text-brand-600 ml-1">AI</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-300 text-brand-800 text-[10px] font-bold mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-500 pulse-dot"></span>
+                    <span>Dự án Doanh nghiệp Đã Khởi Tạo</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStartChoiceModal(false)}
+                aria-label="Đóng popup"
+                className="w-9 h-9 rounded-full bg-white/90 hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center text-sm font-bold shadow-sm transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 m-0">
+                  Chào mừng trở lại{user?.name ? `, ${user.name}` : ''}!
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 mb-0">
+                  Tài khoản này đã thiết lập doanh nghiệp trước đó. Chọn tiếp tục vận hành ngay hoặc chỉnh sửa lại thông tin dự án.
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-sky-50/80 via-white to-emerald-50/70 border border-emerald-200 rounded-2xl p-4 text-xs space-y-1.5 text-slate-700">
+                <div className="font-extrabold text-sm text-brand-900 flex items-center gap-2">
+                  <span>🏢</span>
+                  <span>{existingProjectCtx?.company?.name || user?.company_name || 'Doanh nghiệp EcoLogix'}</span>
+                </div>
+                {existingProjectCtx?.company?.tax_code && (
+                  <div>• <strong>Mã số thuế:</strong> <span className="font-mono">{existingProjectCtx.company.tax_code}</span></div>
+                )}
+                {existingProjectCtx?.company?.industry && (
+                  <div>• <strong>Ngành nghề:</strong> {existingProjectCtx.company.industry}</div>
+                )}
+                {existingProjectCtx?.company?.address && (
+                  <div>• <strong>Địa chỉ:</strong> {existingProjectCtx.company.address}{existingProjectCtx.company.city ? `, ${existingProjectCtx.company.city}` : ''}</div>
+                )}
+                {user?.role && (
+                  <div>• <strong>Vai trò điều hành:</strong> {user.role}</div>
+                )}
+              </div>
+
+              <div className="space-y-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartChoiceModal(false);
+                    onGoApp('dashboard');
+                  }}
+                  className="w-full py-3 rounded-full bg-gradient-to-r from-brand-600 to-emerald-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-brand-500/25 hover:shadow-xl transition"
+                >
+                  🚀 Tiếp tục với dự án hiện tại
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartChoiceModal(false);
+                    setEditCompanyMode(true);
+                    setShowStartModal(true);
+                  }}
+                  className="w-full py-3 rounded-full bg-white border-2 border-brand-600 text-brand-700 hover:bg-emerald-50 text-xs sm:text-sm font-bold transition"
+                >
+                  ✏️ Chỉnh sửa thông tin doanh nghiệp
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showStartModal && (
         <OnboardingView
           isModal={true}
+          isEditMode={editCompanyMode}
+          initialData={editCompanyMode ? existingProjectCtx : null}
           user={user}
           toast={toast}
           showToast={showToast}
           onBack={() => setShowStartModal(false)}
           onGoLogin={() => { setShowStartModal(false); onLogin(); }}
-          onFinish={(newComp) => {
+          onFinish={(newComp, apiRes) => {
             setShowStartModal(false);
-            if (onOnboardingComplete) onOnboardingComplete(newComp);
+            if (onOnboardingComplete) onOnboardingComplete(newComp, apiRes);
             else onGoApp('dashboard');
           }}
         />

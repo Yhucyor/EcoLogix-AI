@@ -20,6 +20,7 @@ from backend.utils.validators import (
     validate_tax_code,
 )
 from backend import config
+from backend.services.email_service import send_password_reset_email, send_verification_otp_email
 
 VALID_ROLES = ("Admin", "Manager", "Dispatcher", "Auditor")
 
@@ -35,6 +36,7 @@ def get_role_permissions(role_name: str) -> list:
 
 
 def _format_user_safe(user: Dict[str, Any]) -> Dict[str, Any]:
+    has_company = bool(user.get("has_company") if user.get("has_company") is not None else 1)
     return {
         "id": user["id"],
         "company_id": user.get("company_id") or 1,
@@ -43,7 +45,8 @@ def _format_user_safe(user: Dict[str, Any]) -> Dict[str, Any]:
         "role": user["role"],
         "avatar_url": user.get("avatar_url"),
         "phone": user.get("phone"),
-        "company_name": user.get("company_name") or "EcoLogix Logistics",
+        "company_name": (user.get("company_name") or "EcoLogix Logistics") if has_company else "",
+        "has_company": has_company,
         "is_verified": user.get("is_verified", 1),
         "permissions": get_role_permissions(user["role"]),
     }
@@ -97,52 +100,64 @@ def register_user(
     phone: str = "",
     role: str = "Manager",
     company_name: str = "",
-) -> Tuple[bool, str, Optional[str]]:
+) -> Tuple[bool, str, Optional[str], bool]:
     ok, msg = validate_non_empty(name, "Họ tên")
     if not ok:
-        return False, msg, None
+        return False, msg, None, False
     ok, msg = validate_email(email)
     if not ok:
-        return False, msg, None
+        return False, msg, None, False
     ok, msg = validate_password(password)
     if not ok:
-        return False, msg, None
+        return False, msg, None, False
     if phone and phone.strip():
         ok_p, msg_p = validate_phone(phone)
         if not ok_p:
-            return False, msg_p, None
+            return False, msg_p, None, False
 
     normalized_role = role if role in ("Manager", "Dispatcher", "Auditor") else "Manager"
+    clean_email = email.strip().lower()
 
-    existing = execute_query("SELECT id FROM users WHERE LOWER(email) = LOWER(?);", (email.strip(),))
+    existing = execute_query("SELECT id FROM users WHERE LOWER(email) = LOWER(?);", (clean_email,))
     if existing:
-        return False, "Email này đã được đăng ký trong hệ thống.", None
+        return False, "Email này đã được đăng ký trong hệ thống.", None, False
 
     otp_code = f"{secrets.randbelow(900000) + 100000}"
     pw_hash = hash_password(password)
+    has_comp = 1 if (company_name and company_name.strip()) else 0
     u_id = execute_insert(
         """
-        INSERT INTO users (company_id, name, email, password_hash, role, phone, is_verified, reset_token)
-        VALUES (1, ?, ?, ?, ?, ?, 0, ?);
+        INSERT INTO users (company_id, name, email, password_hash, role, phone, is_verified, has_company, reset_token)
+        VALUES (1, ?, ?, ?, ?, ?, 0, ?, ?);
         """,
-        (name.strip(), email.strip().lower(), pw_hash, normalized_role, phone.strip(), otp_code),
+        (name.strip(), clean_email, pw_hash, normalized_role, phone.strip(), has_comp, otp_code),
     )
-    if company_name and company_name.strip():
+    if has_comp:
         execute_update("UPDATE companies SET name = ? WHERE id = 1;", (company_name.strip(),))
-    log_activity(u_id, "USER_REGISTER", "users", u_id, f"Đăng ký tài khoản mới {email} ({normalized_role})")
-    return True, f"Đăng ký thành công! Mã xác thực OTP (Demo): {otp_code}", otp_code
+    log_activity(u_id, "USER_REGISTER", "users", u_id, f"Đăng ký tài khoản mới {clean_email} ({normalized_role})")
+
+    email_res = send_verification_otp_email(clean_email, name.strip(), otp_code, is_resend=False)
+    if email_res.get("email_sent"):
+        return True, f"Đăng ký thành công! Mã OTP 6 số đã được gửi tới email {clean_email}.", None, True
+    return True, f"Đăng ký thành công! Mã xác thực OTP (Demo): {otp_code}", otp_code, False
 
 
-def resend_verification_otp(email: str) -> Tuple[bool, str, Optional[str]]:
-    rows = execute_query("SELECT id, is_verified FROM users WHERE LOWER(email) = LOWER(?);", ((email or "").strip(),))
+def resend_verification_otp(email: str) -> Tuple[bool, str, Optional[str], bool]:
+    clean_email = (email or "").strip().lower()
+    rows = execute_query("SELECT id, name, email, is_verified FROM users WHERE LOWER(email) = LOWER(?);", (clean_email,))
     if not rows:
-        return False, "Không tìm thấy tài khoản với email này.", None
+        return False, "Không tìm thấy tài khoản với email này.", None, False
     user = dict(rows[0])
     if user["is_verified"] == 1:
-        return False, "Tài khoản này đã được xác thực trước đó.", None
+        return False, "Tài khoản này đã được xác thực trước đó.", None, False
     otp_code = f"{secrets.randbelow(900000) + 100000}"
     execute_update("UPDATE users SET reset_token = ? WHERE id = ?;", (otp_code, user["id"]))
-    return True, f"Đã gửi lại mã OTP mới (Demo): {otp_code}", otp_code
+    log_activity(user["id"], "RESEND_OTP", "users", user["id"], f"Gửi lại OTP xác thực tới {user['email']}")
+
+    email_res = send_verification_otp_email(user["email"], user.get("name", ""), otp_code, is_resend=True)
+    if email_res.get("email_sent"):
+        return True, f"Đã gửi lại mã OTP mới tới email {user['email']}.", None, True
+    return True, f"Đã gửi lại mã OTP mới (Demo): {otp_code}", otp_code, False
 
 
 def verify_user_account(email: str, otp_code: str) -> Tuple[bool, str]:
@@ -159,13 +174,20 @@ def verify_user_account(email: str, otp_code: str) -> Tuple[bool, str]:
     return True, "Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay."
 
 
-def request_password_reset(email: str) -> Tuple[bool, str, Optional[str]]:
-    rows = execute_query("SELECT id FROM users WHERE LOWER(email) = LOWER(?);", ((email or "").strip(),))
+def request_password_reset(email: str) -> Tuple[bool, str, Optional[str], bool]:
+    clean_email = (email or "").strip().lower()
+    rows = execute_query("SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?);", (clean_email,))
     if not rows:
-        return False, "Email không tồn tại trong hệ thống.", None
+        return False, "Email không tồn tại trong hệ thống.", None, False
+    user = dict(rows[0])
     token = f"RST-{secrets.randbelow(900000) + 100000}"
-    execute_update("UPDATE users SET reset_token = ? WHERE id = ?;", (token, rows[0]["id"]))
-    return True, f"Mã khôi phục mật khẩu (Demo): {token}", token
+    execute_update("UPDATE users SET reset_token = ? WHERE id = ?;", (token, user["id"]))
+    log_activity(user["id"], "REQUEST_PASSWORD_RESET", "users", user["id"], f"Yêu cầu khôi phục mật khẩu ({user['email']})")
+
+    email_res = send_password_reset_email(user["email"], user.get("name", ""), token)
+    if email_res.get("email_sent"):
+        return True, f"Mã khôi phục mật khẩu đã được gửi tới email {user['email']}.", None, True
+    return True, f"Mã khôi phục mật khẩu (Demo): {token}", token, False
 
 
 def reset_password(email: str, token: str, new_password: str) -> Tuple[bool, str]:
@@ -281,6 +303,8 @@ def complete_onboarding(payload: Dict[str, Any], user_id: int = 1) -> Tuple[bool
 
     execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = 1 AND setting_key = 'FUEL_PRICE_PER_LITER';", (str(fuel_price),))
     execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = 1 AND setting_key = 'MAX_VEHICLE_LOAD_KG';", (str(max_load),))
+    if user_id:
+        execute_update("UPDATE users SET has_company = 1 WHERE id = ?;", (user_id,))
 
     log_activity(user_id, "COMPLETE_ONBOARDING", "companies", 1, f"Thiết lập doanh nghiệp {comp_name} hoàn tất")
     create_notification(user_id, "Chào mừng đến với EcoLogix AI", f"Hồ sơ vận hành của {comp_name} đã sẵn sàng.", "success")
@@ -289,4 +313,25 @@ def complete_onboarding(payload: Dict[str, Any], user_id: int = 1) -> Tuple[bool
         "company_name": comp_name,
         "fuel_price": fuel_price,
         "max_load_kg": max_load,
+        "user": get_user_by_id(user_id) if user_id else None,
+    }
+
+
+def get_onboarding_context(user_id: int) -> Dict[str, Any]:
+    """Trả về trạng thái doanh nghiệp hiện có và thông số mặc định cho modal tiếp tục/chỉnh sửa."""
+    user = get_user_by_id(user_id)
+    has_company = bool(user and user.get("has_company"))
+    comp_rows = rows_to_dicts(execute_query("SELECT id, name, tax_code, industry, size, address, city, phone, email FROM companies ORDER BY id ASC LIMIT 1;"))
+    wh_rows = rows_to_dicts(execute_query("SELECT name, code, address FROM warehouses ORDER BY id DESC LIMIT 1;"))
+    veh_rows = rows_to_dicts(execute_query("SELECT vehicle_name, plate_number, max_load_kg, operational_cost_per_km FROM vehicles ORDER BY id DESC LIMIT 1;"))
+    return {
+        "has_company": has_company,
+        "company": comp_rows[0] if (has_company and comp_rows) else None,
+        "warehouse": wh_rows[0] if (has_company and wh_rows) else None,
+        "vehicle": veh_rows[0] if (has_company and veh_rows) else None,
+        "config": {
+            "fuel_price": config.FUEL_PRICE_PER_LITER,
+            "max_load_kg": config.MAX_VEHICLE_LOAD_KG,
+            "cost_per_km": config.DRIVER_AND_DEPRECIATION_PER_KM,
+        },
     }

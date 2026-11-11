@@ -154,9 +154,9 @@ function InventoryView({ showToast, onRefreshHeader }) {
       )}
 
       {tab === 'tx' && (
-        <form onSubmit={submitTx} className="max-w-xl eco-card-glow bg-white p-6 rounded-3xl border border-sky-100 shadow-sm space-y-3 text-xs">
+        <form onSubmit={submitTx} className="max-w-xl eco-card-glow bg-white p-5 sm:p-6 rounded-3xl border border-sky-100 shadow-sm space-y-3 text-xs">
           <h4 className="font-extrabold text-sm m-0">Thực hiện Giao dịch Kho (Ghi trực tiếp SQLite)</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select value={txForm.trans_type} onChange={(e) => setTxForm({ ...txForm, trans_type: e.target.value })} className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70 font-bold">
               <option value="IN">Nhập kho (IN)</option>
               <option value="OUT">Xuất kho (OUT)</option>
@@ -167,7 +167,7 @@ function InventoryView({ showToast, onRefreshHeader }) {
               {invData.products.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select value={txForm.warehouse_id} onChange={(e) => setTxForm({ ...txForm, warehouse_id: Number(e.target.value) })} className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70">
               {invData.warehouses.map((w) => <option key={w.id} value={w.id}>Kho: {w.name}</option>)}
             </select>
@@ -274,11 +274,11 @@ function InventorySkuPanel({ products, skuForm, setSkuForm, onAddSku, onDeleteSk
           <h4 className="font-extrabold text-sm m-0">➕ Thêm sản phẩm SKU</h4>
           <input value={skuForm.sku} onChange={(e) => setSkuForm({ ...skuForm, sku: e.target.value })} placeholder="Mã SKU *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:border-brand-500" required />
           <input value={skuForm.name} onChange={(e) => setSkuForm({ ...skuForm, name: e.target.value })} placeholder="Tên sản phẩm *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:border-brand-500" required />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input value={skuForm.category} onChange={(e) => setSkuForm({ ...skuForm, category: e.target.value })} placeholder="Danh mục" className="px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
             <input value={skuForm.unit} onChange={(e) => setSkuForm({ ...skuForm, unit: e.target.value })} placeholder="Đơn vị" className="px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input type="number" value={skuForm.unit_price} onChange={(e) => setSkuForm({ ...skuForm, unit_price: Number(e.target.value) })} placeholder="Đơn giá" className="px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
             <input type="number" step="0.5" value={skuForm.weight_kg} onChange={(e) => setSkuForm({ ...skuForm, weight_kg: Number(e.target.value) })} placeholder="KL (kg)" className="px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
           </div>
@@ -293,7 +293,7 @@ function InventorySkuPanel({ products, skuForm, setSkuForm, onAddSku, onDeleteSk
               <label className="font-bold text-slate-600 block mb-1">Tên sản phẩm *</label>
               <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" required />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Danh mục</label>
                 <input value={editing.category || ''} onChange={(e) => setEditing({ ...editing, category: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50" />
@@ -303,7 +303,7 @@ function InventorySkuPanel({ products, skuForm, setSkuForm, onAddSku, onDeleteSk
                 <input value={editing.unit || ''} onChange={(e) => setEditing({ ...editing, unit: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Đơn giá (VNĐ)</label>
                 <input type="number" value={editing.unit_price} onChange={(e) => setEditing({ ...editing, unit_price: Number(e.target.value) })} className="w-full px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50" required />
@@ -313,7 +313,7 @@ function InventorySkuPanel({ products, skuForm, setSkuForm, onAddSku, onDeleteSk
                 <input type="number" step="0.5" value={editing.weight_kg} onChange={(e) => setEditing({ ...editing, weight_kg: Number(e.target.value) })} className="w-full px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50" required />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Tồn tối thiểu (Min)</label>
                 <input type="number" value={editing.min_stock ?? 40} onChange={(e) => setEditing({ ...editing, min_stock: Number(e.target.value) })} className="w-full px-3.5 py-2 rounded-xl border border-sky-200 bg-slate-50" />

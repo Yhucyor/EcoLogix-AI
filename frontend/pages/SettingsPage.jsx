@@ -97,7 +97,7 @@ function SettingsView({ user, setUser, showToast }) {
             <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-amber-900">
               <strong>⚡ Trạm Sửa Code 15 Phút Chung Kết:</strong> Cập nhật trực tiếp tham số kinh tế xuống file <code>backend/config.py</code> & SQLite, đồng bộ ngay cho cả Routing & Multi-Agent!
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className="font-bold text-text-sub block mb-1">Giá xăng (VNĐ/Lít)</label><input type="number" step="500" value={live.fuel_price} onChange={(e) => setLive({ ...live, fuel_price: Number(e.target.value) })} className="w-full p-2.5 rounded-xl border border-sky-200 bg-slate-50 font-mono font-bold" /></div>
               <div><label className="font-bold text-text-sub block mb-1">Thuế Carbon (VNĐ/kg CO₂)</label><input type="number" step="100" value={live.carbon_tax} onChange={(e) => setLive({ ...live, carbon_tax: Number(e.target.value) })} className="w-full p-2.5 rounded-xl border border-sky-200 bg-slate-50 font-mono font-bold" /></div>
               <div><label className="font-bold text-text-sub block mb-1">Tải trọng chuẩn (kg)</label><input type="number" step="100" value={live.max_load_kg} onChange={(e) => setLive({ ...live, max_load_kg: Number(e.target.value) })} className="w-full p-2.5 rounded-xl border border-sky-200 bg-slate-50 font-mono font-bold" /></div>

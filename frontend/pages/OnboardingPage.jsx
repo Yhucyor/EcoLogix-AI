@@ -1,25 +1,46 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 // ==================== 3. ONBOARDING 3-STEP WIZARD (POPUP GIỮA MÀN HÌNH & STANDALONE, PHONG CÁCH INDEX) ====================
-function OnboardingView({ user, onFinish, onBack, showToast, toast, isModal = false, onGoLogin }) {
+function OnboardingView({ user, onFinish, onBack, showToast, toast, isModal = false, onGoLogin, initialData = null, isEditMode = false }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    company_name: 'Công Ty TNHH Phân Phối Hàng Tiêu Dùng Sài Gòn',
-    tax_code: '0318992211',
-    address: 'Khu Công Nghệ Cao, TP. Thủ Đức',
-    city: 'TP. Hồ Chí Minh',
-    industry: 'Phân phối hàng tiêu dùng (FMCG)',
-    size: 'Doanh nghiệp nhỏ (10 - 50 nhân viên)',
-    warehouse_name: 'Kho Trung Tâm Quận 9',
-    warehouse_code: 'WH-Q9-01',
-    warehouse_address: 'Xa Lộ Hà Nội, TP. Thủ Đức',
-    vehicle_name: 'Xe Tải Eco 2.0T Mới',
-    vehicle_plate: '51D-668.88',
-    max_load_kg: 1500,
-    fuel_price: 23500,
-    cost_per_km: 3800,
+  const [form, setForm] = useState(() => ({
+    company_name: initialData?.company?.name || (user?.has_company && user?.company_name) || 'Công Ty TNHH Phân Phối Hàng Tiêu Dùng Sài Gòn',
+    tax_code: initialData?.company?.tax_code || '0318992211',
+    address: initialData?.company?.address || 'Khu Công Nghệ Cao, TP. Thủ Đức',
+    city: initialData?.company?.city || 'TP. Hồ Chí Minh',
+    industry: initialData?.company?.industry || 'Phân phối hàng tiêu dùng (FMCG)',
+    size: initialData?.company?.size || 'Doanh nghiệp nhỏ (10 - 50 nhân viên)',
+    warehouse_name: initialData?.warehouse?.name || 'Kho Trung Tâm Quận 9',
+    warehouse_code: initialData?.warehouse?.code || 'WH-Q9-01',
+    warehouse_address: initialData?.warehouse?.address || 'Xa Lộ Hà Nội, TP. Thủ Đức',
+    vehicle_name: initialData?.vehicle?.vehicle_name || 'Xe Tải Eco 2.0T Mới',
+    vehicle_plate: initialData?.vehicle?.plate_number || '51D-668.88',
+    max_load_kg: initialData?.config?.max_load_kg || 1500,
+    fuel_price: initialData?.config?.fuel_price || 23500,
+    cost_per_km: initialData?.config?.cost_per_km || 3800,
     user_id: user?.id || 1,
-  });
+  }));
+
+  useEffect(() => {
+    if (!initialData) return;
+    setForm((prev) => ({
+      ...prev,
+      company_name: initialData.company?.name || prev.company_name,
+      tax_code: initialData.company?.tax_code || prev.tax_code,
+      address: initialData.company?.address || prev.address,
+      city: initialData.company?.city || prev.city,
+      industry: initialData.company?.industry || prev.industry,
+      size: initialData.company?.size || prev.size,
+      warehouse_name: initialData.warehouse?.name || prev.warehouse_name,
+      warehouse_code: initialData.warehouse?.code || prev.warehouse_code,
+      warehouse_address: initialData.warehouse?.address || prev.warehouse_address,
+      vehicle_name: initialData.vehicle?.vehicle_name || prev.vehicle_name,
+      vehicle_plate: initialData.vehicle?.plate_number || prev.vehicle_plate,
+      max_load_kg: initialData.config?.max_load_kg || prev.max_load_kg,
+      fuel_price: initialData.config?.fuel_price || prev.fuel_price,
+      cost_per_km: initialData.config?.cost_per_km || prev.cost_per_km,
+    }));
+  }, [initialData]);
 
   useEffect(() => {
     if (!isModal) return;
@@ -39,8 +60,8 @@ function OnboardingView({ user, onFinish, onBack, showToast, toast, isModal = fa
     }
     setSaving(true);
     try {
-      await apiFetch('/api/onboarding', { method: 'POST', body: JSON.stringify(form) });
-      onFinish(form.company_name);
+      const res = await apiFetch('/api/onboarding', { method: 'POST', body: JSON.stringify(form) });
+      onFinish(form.company_name, res);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -71,7 +92,7 @@ function OnboardingView({ user, onFinish, onBack, showToast, toast, isModal = fa
               </div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-300 text-brand-800 text-[10px] font-bold mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 pulse-dot"></span>
-                <span>Thiết lập Doanh nghiệp Chuỗi cung ứng Xanh</span>
+                <span>{isEditMode ? 'Chỉnh sửa Hồ sơ Doanh nghiệp & Vận hành' : 'Thiết lập Doanh nghiệp Chuỗi cung ứng Xanh'}</span>
               </div>
             </div>
           </div>
@@ -218,7 +239,7 @@ function OnboardingView({ user, onFinish, onBack, showToast, toast, isModal = fa
             <div className="flex gap-3 pt-3">
               <button type="button" onClick={() => setStep(2)} className="px-5 py-3 rounded-full border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">← Quay lại sửa</button>
               <button type="button" disabled={saving} onClick={handleComplete} className="flex-1 py-3 rounded-full bg-gradient-to-r from-brand-600 to-emerald-500 disabled:opacity-60 text-white text-xs sm:text-sm font-bold shadow-lg shadow-brand-500/30 hover:shadow-xl transition">
-                {saving ? '⏳ Đang khởi tạo dữ liệu...' : '🚀 Hoàn tất & Vào Dashboard'}
+                {saving ? '⏳ Đang lưu dữ liệu...' : isEditMode ? '💾 Lưu thay đổi & Vào Dashboard' : '🚀 Hoàn tất & Vào Dashboard'}
               </button>
             </div>
           </div>

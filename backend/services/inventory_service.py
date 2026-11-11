@@ -29,10 +29,11 @@ def add_warehouse(name: str, code: str, address: str, capacity_m3: float, lat: f
     # Khởi tạo tồn kho 0 cho các sản phẩm hiện có
     prods = execute_query("SELECT id, min_stock FROM products;")
     for p in prods:
-        execute_insert(
-            "INSERT OR IGNORE INTO inventory (warehouse_id, product_id, quantity, safety_stock, reorder_point) VALUES (?, ?, 0, ?, ?);",
-            (w_id, p["id"], int((p["min_stock"] or 40) * 0.5), int((p["min_stock"] or 40) * 1.2)),
-        )
+        if not execute_query("SELECT id FROM inventory WHERE warehouse_id = ? AND product_id = ?;", (w_id, p["id"])):
+            execute_insert(
+                "INSERT INTO inventory (warehouse_id, product_id, quantity, safety_stock, reorder_point) VALUES (?, ?, 0, ?, ?);",
+                (w_id, p["id"], int((p["min_stock"] or 40) * 0.5), int((p["min_stock"] or 40) * 1.2)),
+            )
     log_activity(user_id, "CREATE_WAREHOUSE", "warehouses", w_id, f"Thêm kho {name} ({code})")
     return True, f"Đã thêm kho `{name}` thành công!"
 

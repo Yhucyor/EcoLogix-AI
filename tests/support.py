@@ -59,22 +59,30 @@ class IsolatedDbTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._prev_db_env = os.environ.get("ECOLOGIX_DB_PATH")
+        cls._prev_smtp_user = os.environ.get("SMTP_USER")
+        cls._prev_smtp_pass = os.environ.get("SMTP_PASSWORD")
+        cls._prev_osrm_env = os.environ.get("ECOLOGIX_DISABLE_OSRM")
+        os.environ["SMTP_USER"] = ""
+        os.environ["SMTP_PASSWORD"] = ""
+        os.environ["ECOLOGIX_DISABLE_OSRM"] = "1"
         cls._tmpdir = tempfile.mkdtemp(prefix="ecologix_test_")
         cls.test_db_path = os.path.join(cls._tmpdir, "ecologix_test.db")
-        if os.path.exists(DEFAULT_DB_FILE):
-            shutil.copy2(DEFAULT_DB_FILE, cls.test_db_path)
-            os.environ["ECOLOGIX_DB_PATH"] = cls.test_db_path
-        else:
-            os.environ["ECOLOGIX_DB_PATH"] = cls.test_db_path
-            init_database()
-            seed_all()
+        os.environ["ECOLOGIX_DB_PATH"] = cls.test_db_path
+        init_database()
+        seed_all()
 
     @classmethod
     def tearDownClass(cls):
-        if cls._prev_db_env is None:
-            os.environ.pop("ECOLOGIX_DB_PATH", None)
-        else:
-            os.environ["ECOLOGIX_DB_PATH"] = cls._prev_db_env
+        for k, prev in (
+            ("ECOLOGIX_DB_PATH", cls._prev_db_env),
+            ("SMTP_USER", cls._prev_smtp_user),
+            ("SMTP_PASSWORD", cls._prev_smtp_pass),
+            ("ECOLOGIX_DISABLE_OSRM", cls._prev_osrm_env),
+        ):
+            if prev is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = prev
         shutil.rmtree(cls._tmpdir, ignore_errors=True)
 
 

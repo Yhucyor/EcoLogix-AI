@@ -21,6 +21,9 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
   // Verify & Forgot state
   const [otp, setOtp] = useState('');
   const [demoOtpHint, setDemoOtpHint] = useState('');
+  const [emailSentInfo, setEmailSentInfo] = useState('');
+  const [showRegPw, setShowRegPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
   const [token, setToken] = useState('');
   const [demoTokenHint, setDemoTokenHint] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -28,6 +31,7 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
 
   const switchMode = (m) => {
     setErrorMsg('');
+    setEmailSentInfo('');
     setMode(m);
   };
 
@@ -46,6 +50,7 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
       setErrorMsg(msg);
       showToast(msg, 'error');
       if (msg.toLowerCase().includes('xác thực')) {
+        setEmailSentInfo(`Tài khoản ${email.trim()} chưa kích hoạt OTP. Kiểm tra hộp thư hoặc bấm "Gửi lại OTP" bên dưới.`);
         setMode('verify');
       }
     } finally {
@@ -81,6 +86,7 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
       showToast(res.message);
       setOtp(res.demo_otp || '');
       setDemoOtpHint(res.demo_otp || '');
+      setEmailSentInfo(res.email_sent ? `Mã xác thực OTP 6 số đã được gửi tới email ${cleanEmail}. Vui lòng kiểm tra Hộp thư đến (hoặc mục Spam).` : '');
       setPassword(regPassword);
       setMode('verify');
     } catch (err) {
@@ -93,15 +99,21 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
 
   const handleResendOtp = async () => {
     setErrorMsg('');
+    if (!email.trim()) {
+      setErrorMsg('Vui lòng nhập email để gửi lại mã OTP.');
+      return;
+    }
     setLoading(true);
     try {
+      const cleanEmail = email.trim();
       const res = await apiFetch('/api/auth/resend-otp', {
         method: 'POST',
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
       showToast(res.message);
-      setOtp(res.demo_otp || '');
+      if (res.demo_otp) setOtp(res.demo_otp);
       setDemoOtpHint(res.demo_otp || '');
+      setEmailSentInfo(res.email_sent ? `Đã gửi lại mã OTP mới tới email ${cleanEmail}. Vui lòng kiểm tra hộp thư.` : '');
     } catch (err) {
       setErrorMsg(err.message);
       showToast(err.message, 'error');
@@ -138,13 +150,15 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
     }
     setLoading(true);
     try {
+      const cleanEmail = email.trim();
       const res = await apiFetch('/api/auth/forgot', {
         method: 'POST',
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
       showToast(res.message);
       setToken(res.demo_token || '');
       setDemoTokenHint(res.demo_token || '');
+      setEmailSentInfo(res.email_sent ? `Mã khôi phục (RST-...) đã được gửi tới email ${cleanEmail}. Vui lòng kiểm tra Hộp thư đến (hoặc Spam).` : '');
     } catch (err) {
       setErrorMsg(err.message);
       showToast(err.message, 'error');
@@ -228,7 +242,7 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
 
             <div className="bg-white/90 backdrop-blur-sm border border-sky-100 rounded-2xl p-3 xl:p-3.5 text-xs text-slate-700 space-y-1.5 shadow-card">
               <div className="font-extrabold text-brand-800 flex items-center gap-2"><i className="fa-solid fa-key text-brand-600"></i> Đăng nhập nhanh Tài khoản Demo (SQLite):</div>
-              <div className="grid grid-cols-3 gap-2 pt-0.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
                 {[
                   { role: 'Manager', email: 'nguyen.van.a@ecologix.vn', desc: 'Toàn quyền vận hành' },
                   { role: 'Dispatcher', email: 'thuy.nguyen@abc.com', desc: 'Điều phối & Kho' },
@@ -258,7 +272,7 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
       <div className="lg:col-span-6 bg-white p-5 sm:p-7 lg:p-8 xl:p-10 flex items-center justify-center lg:h-full lg:overflow-hidden">
         <div className="w-full max-w-lg min-h-[540px] lg:min-h-0 lg:h-[560px] lg:max-h-full flex flex-col justify-between">
           {/* Hàng nút chế độ & Về trang chủ luôn cố định vị trí */}
-          <div className="shrink-0 flex items-center justify-between gap-2 pb-4 border-b border-slate-100">
+          <div className="shrink-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-full border border-slate-200/80 shrink-0">
               <button type="button" onClick={() => switchMode('login')} className={`whitespace-nowrap text-xs font-bold px-3 sm:px-3.5 py-1.5 rounded-full transition ${mode === 'login' ? 'bg-gradient-to-r from-brand-600 to-emerald-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Đăng nhập</button>
               <button type="button" onClick={() => switchMode('register')} className={`whitespace-nowrap text-xs font-bold px-3 sm:px-3.5 py-1.5 rounded-full transition ${mode === 'register' || mode === 'verify' ? 'bg-gradient-to-r from-brand-600 to-emerald-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Đăng ký</button>
@@ -330,11 +344,16 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
                   </select>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Mật khẩu (>= 6 ký tự) *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:border-brand-600 outline-none" required />
-                  <input type="password" value={regConfirmPw} onChange={(e) => setRegConfirmPw(e.target.value)} placeholder="Xác nhận mật khẩu *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:border-brand-600 outline-none" required />
+                  <div className="relative">
+                    <input type={showRegPw ? 'text' : 'password'} value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Mật khẩu (>= 6 ký tự) *" className="w-full text-sm pl-3.5 pr-9 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:border-brand-600 outline-none" required />
+                    <button type="button" onClick={() => setShowRegPw(!showRegPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs px-1">
+                      <i className={`fa-regular ${showRegPw ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                    </button>
+                  </div>
+                  <input type={showRegPw ? 'text' : 'password'} value={regConfirmPw} onChange={(e) => setRegConfirmPw(e.target.value)} placeholder="Xác nhận mật khẩu *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:border-brand-600 outline-none" required />
                 </div>
                 <button disabled={loading} type="submit" className="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:shadow-xl disabled:opacity-60 text-white py-3 rounded-full text-sm font-bold shadow-lg shadow-brand-500/25 transition">
-                  {loading ? '⏳ Đang tạo tài khoản...' : 'Đăng ký & Nhận mã OTP'}
+                  {loading ? '⏳ Đang gửi OTP qua Email...' : 'Đăng ký & Nhận mã OTP'}
                 </button>
               </form>
             )}
@@ -345,15 +364,20 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
                   <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 m-0">Xác thực tài khoản OTP</h3>
                   <p className="text-xs text-slate-500 mt-1">Email kích hoạt: <strong>{email}</strong></p>
                 </div>
+                {emailSentInfo && (
+                  <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-xs text-sky-900">
+                    📧 {emailSentInfo}
+                  </div>
+                )}
                 {demoOtpHint && (
                   <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-brand-900">
                     🔐 <strong>Mã OTP (Demo):</strong> <span className="font-mono font-extrabold text-sm ml-1">{demoOtpHint}</span>
                   </div>
                 )}
-                <input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Nhập mã OTP 6 số *" className="w-full text-sm px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 font-mono outline-none" required />
+                <input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Nhập mã OTP 6 số từ email *" className="w-full text-sm px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 font-mono outline-none" required />
                 <div className="flex gap-2">
-                  <button disabled={loading} type="submit" className="flex-1 bg-gradient-to-r from-brand-600 to-emerald-500 hover:shadow-xl text-white py-3 rounded-full text-sm font-bold shadow-lg shadow-brand-500/25 transition">Xác thực tài khoản</button>
-                  <button disabled={loading} type="button" onClick={handleResendOtp} className="px-4 py-3 rounded-full border border-sky-200 hover:bg-sky-50 text-sky-700 text-xs font-bold transition">Gửi lại OTP</button>
+                  <button disabled={loading} type="submit" className="flex-1 bg-gradient-to-r from-brand-600 to-emerald-500 hover:shadow-xl disabled:opacity-60 text-white py-3 rounded-full text-sm font-bold shadow-lg shadow-brand-500/25 transition">Xác thực tài khoản</button>
+                  <button disabled={loading} type="button" onClick={handleResendOtp} className="px-4 py-3 rounded-full border border-sky-200 hover:bg-sky-50 text-sky-700 text-xs font-bold transition whitespace-nowrap">Gửi lại OTP</button>
                 </div>
                 <button type="button" onClick={() => switchMode('register')} className="text-xs text-slate-500 hover:text-brand-600 font-semibold">← Quay lại chỉnh sửa thông tin đăng ký</button>
               </form>
@@ -363,23 +387,35 @@ function LoginView({ onLoginSuccess, onGoOnboarding, onGoHome, toast, showToast,
               <form onSubmit={submitReset} className="space-y-3.5">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 m-0">Khôi phục mật khẩu</h3>
-                  <p className="text-xs text-slate-500 mt-1">Nhận mã xác nhận và đặt lại mật khẩu truy cập mới</p>
+                  <p className="text-xs text-slate-500 mt-1">Nhận mã xác nhận qua Gmail và đặt lại mật khẩu truy cập mới</p>
                 </div>
                 <div className="flex gap-2">
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email đăng ký" className="flex-1 text-sm px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 outline-none" required />
-                  <button disabled={loading} type="button" onClick={requestReset} className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition whitespace-nowrap">Lấy mã</button>
+                  <button disabled={loading} type="button" onClick={requestReset} className="px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold transition whitespace-nowrap">
+                    {loading ? 'Đang gửi...' : 'Gửi mã Email'}
+                  </button>
                 </div>
+                {emailSentInfo && (
+                  <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-xs text-sky-900">
+                    📧 {emailSentInfo}
+                  </div>
+                )}
                 {demoTokenHint && (
-                  <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-900">
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-brand-900">
                     🔑 <strong>Mã khôi phục (Demo):</strong> <span className="font-mono font-extrabold">{demoTokenHint}</span>
                   </div>
                 )}
                 <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Mã khôi phục (RST-...)" className="w-full text-sm px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 font-mono outline-none" required />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Mật khẩu mới (>= 6 ký tự) *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 outline-none" required />
-                  <input type="password" value={confirmNewPw} onChange={(e) => setConfirmNewPw(e.target.value)} placeholder="Xác nhận MK mới *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 outline-none" required />
+                  <div className="relative">
+                    <input type={showNewPw ? 'text' : 'password'} value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Mật khẩu mới (>= 6 ký tự) *" className="w-full text-sm pl-3.5 pr-9 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 outline-none" required />
+                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs px-1">
+                      <i className={`fa-regular ${showNewPw ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                    </button>
+                  </div>
+                  <input type={showNewPw ? 'text' : 'password'} value={confirmNewPw} onChange={(e) => setConfirmNewPw(e.target.value)} placeholder="Xác nhận MK mới *" className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 outline-none" required />
                 </div>
-                <button disabled={loading} type="submit" className="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:shadow-xl text-white py-3 rounded-full text-sm font-bold shadow-lg shadow-brand-500/25 transition">Đặt lại mật khẩu</button>
+                <button disabled={loading} type="submit" className="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:shadow-xl disabled:opacity-60 text-white py-3 rounded-full text-sm font-bold shadow-lg shadow-brand-500/25 transition">Đặt lại mật khẩu</button>
               </form>
             )}
           </div>

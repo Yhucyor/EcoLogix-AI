@@ -33,7 +33,7 @@ def get_financial_overview() -> dict:
     latest_exp_rows = execute_query("""
     SELECT COALESCE(SUM(amount_vnd), 0) as latest_cost
     FROM expenses
-    WHERE strftime('%Y-%m', expense_date) = (SELECT MAX(strftime('%Y-%m', expense_date)) FROM expenses);
+    WHERE SUBSTR(expense_date, 1, 7) = (SELECT MAX(SUBSTR(expense_date, 1, 7)) FROM expenses);
     """)
     latest_month_cost = float(latest_exp_rows[0]["latest_cost"]) if latest_exp_rows else total_cost
 
@@ -52,11 +52,12 @@ def get_financial_overview() -> dict:
 
     # Chi phí & doanh thu / lợi nhuận theo từng tháng
     monthly_rows = execute_query("""
-    SELECT strftime('%m', expense_date) as m_num,
+    SELECT SUBSTR(expense_date, 1, 7) as ym,
+           SUBSTR(expense_date, 6, 2) as m_num,
            COALESCE(SUM(amount_vnd), 0) as cost_vnd
     FROM expenses
-    GROUP BY strftime('%Y-%m', expense_date)
-    ORDER BY expense_date ASC;
+    GROUP BY SUBSTR(expense_date, 1, 7), SUBSTR(expense_date, 6, 2)
+    ORDER BY ym ASC;
     """)
     monthly_financial = []
     # Khi áp dụng AI từ T9 -> T11, hiệu suất cải thiện giúp biên lợi nhuận tăng dần

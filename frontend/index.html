@@ -96,12 +96,21 @@
     }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    /* Sidebar & Workspace đồng bộ trang index + quầng sáng nhẹ theo con trỏ chuột */
+    .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+    @media (max-width: 640px) {
+      html { font-size: 14.5px; }
+    }
+    @media (min-width: 1600px) {
+      html { font-size: 16.5px; }
+    }
+    /* Sidebar sạch hiện đại + quầng sáng nhẹ & Active pill xanh bạc hà dịu */
     .eco-sidebar-surface {
-      background: radial-gradient(circle at 0% 0%, rgba(186, 230, 253, 0.45) 0%, transparent 55%),
-                  radial-gradient(circle at 100% 100%, rgba(167, 243, 208, 0.38) 0%, transparent 55%),
-                  linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 249, 255, 0.92) 52%, rgba(236, 253, 245, 0.95) 100%);
-      backdrop-filter: blur(18px);
+      background: #FFFFFF;
+    }
+    .eco-sidebar-surface.eco-dark-sidebar {
+      background: #0F172A;
+      border-color: #1E293B !important;
+      color: #E2E8F0;
     }
     .eco-sidebar-surface::before {
       content: "";
@@ -110,7 +119,7 @@
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s ease;
-      background: radial-gradient(46px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.16), rgba(56, 189, 248, 0.11) 45%, transparent 72%);
+      background: radial-gradient(46px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.08), rgba(56, 189, 248, 0.05) 45%, transparent 72%);
       z-index: 0;
     }
     .eco-sidebar-surface:hover::before { opacity: 1; }
@@ -120,7 +129,7 @@
       position: relative;
       overflow: hidden;
       border: 1px solid transparent;
-      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .eco-nav-item::before {
       content: "";
@@ -130,32 +139,36 @@
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.16s ease;
-      background: radial-gradient(36px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.26), rgba(56, 189, 248, 0.14) 48%, transparent 75%);
+      background: radial-gradient(36px circle at var(--mx, 50%) var(--my, 50%), rgba(16, 185, 129, 0.14), rgba(56, 189, 248, 0.08) 48%, transparent 75%);
       z-index: 0;
     }
     .eco-nav-item:hover::before { opacity: 1; }
     .eco-nav-item > * { position: relative; z-index: 1; }
     .eco-nav-item:hover {
-      background: rgba(255, 255, 255, 0.94);
-      border-color: rgba(16, 185, 129, 0.26);
-      color: #047857;
-      transform: translateX(3px);
-      box-shadow: 0 2px 10px -2px rgba(16, 185, 129, 0.16);
+      background: #F8FAFC;
+      color: #0F172A;
+    }
+    .eco-dark-sidebar .eco-nav-item:hover {
+      background: #1E293B;
+      color: #F8FAFC;
     }
     .eco-nav-item-active {
-      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
-      color: #FFFFFF !important;
-      border-color: rgba(16, 185, 129, 0.42);
-      box-shadow: 0 6px 16px -4px rgba(16, 185, 129, 0.36);
+      background: #DCFCE7;
+      color: #047857 !important;
+      border-color: rgba(16, 185, 129, 0.2);
     }
-    .eco-nav-item-active::before {
-      background: radial-gradient(34px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.30), rgba(186, 230, 253, 0.14) 48%, transparent 75%);
+    .eco-dark-sidebar .eco-nav-item-active {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34D399 !important;
+      border-color: rgba(16, 185, 129, 0.35);
     }
     .eco-nav-item-active:hover {
-      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
-      color: #FFFFFF !important;
-      transform: translateX(3px);
-      box-shadow: 0 6px 18px -4px rgba(16, 185, 129, 0.42);
+      background: #D1FAE5;
+      color: #065F46 !important;
+    }
+    .eco-dark-sidebar .eco-nav-item-active:hover {
+      background: rgba(16, 185, 129, 0.25);
+      color: #6EE7B7 !important;
     }
 
     .eco-card-glow {
@@ -222,23 +235,22 @@
     (async function loadEcoModules() {
       const modules = [
         '/components/common.jsx?v=5',
-        '/components/EcoLeafletMap.jsx?v=5',
-        '/pages/OnboardingPage.jsx?v=5',
-        '/pages/LoginPage.jsx?v=7',
-        '/pages/LandingPage.jsx?v=6',
-        '/pages/DashboardPage.jsx?v=5',
-        '/pages/InventoryPage.jsx?v=5',
+        '/components/EcoLeafletMap.jsx?v=7',
+        '/pages/OnboardingPage.jsx?v=6',
+        '/pages/LoginPage.jsx?v=9',
+        '/pages/LandingPage.jsx?v=8',
+        '/pages/DashboardPage.jsx?v=6',
+        '/pages/InventoryPage.jsx?v=6',
         '/pages/ForecastingPage.jsx?v=5',
-        '/pages/OrdersPage.jsx?v=5',
-        '/pages/RoutingPage.jsx?v=5',
-        '/pages/VehiclesPage.jsx?v=5',
-        '/pages/PartnersPage.jsx?v=5',
-        '/pages/AiAssistantPage.jsx?v=5',
+        '/pages/OrdersPage.jsx?v=6',
+        '/pages/RoutingPage.jsx?v=8',
+        '/pages/VehiclesPage.jsx?v=6',
+        '/pages/PartnersPage.jsx?v=6',
+        '/pages/AiAssistantPage.jsx?v=6',
         '/pages/ReportsPage.jsx?v=5',
         '/pages/NotificationsPage.jsx?v=5',
-        '/pages/SettingsPage.jsx?v=5',
-        '/pages/MobileDemoPage.jsx?v=5',
-        '/pages/App.jsx?v=5',
+        '/pages/SettingsPage.jsx?v=6',
+        '/pages/App.jsx?v=11',
       ];
       if (!window.__ecoPointerGlowBound) {
         window.__ecoPointerGlowBound = true;

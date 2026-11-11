@@ -116,13 +116,13 @@ function OrdersView({ showToast, onRefreshHeader }) {
           <select value={newOrder.warehouse_id} onChange={(e) => setNewOrder({ ...newOrder, warehouse_id: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70">
             {data.warehouses.map((w) => <option key={w.id} value={w.id}>Xuất từ: {w.name}</option>)}
           </select>
-          <div className="grid grid-cols-3 gap-2">
-            <select value={newOrder.product_id} onChange={(e) => setNewOrder({ ...newOrder, product_id: Number(e.target.value) })} className="col-span-2 px-3 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <select value={newOrder.product_id} onChange={(e) => setNewOrder({ ...newOrder, product_id: Number(e.target.value) })} className="sm:col-span-2 px-3 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70">
               {data.products.map((p) => <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>)}
             </select>
             <input type="number" min="1" value={newOrder.quantity} onChange={(e) => setNewOrder({ ...newOrder, quantity: Number(e.target.value) })} className="px-3 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" placeholder="SL" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <label className="text-[10px] font-bold text-slate-500 block mb-1">Nhận từ</label>
               <input value={newOrder.time_window_start} onChange={(e) => setNewOrder({ ...newOrder, time_window_start: e.target.value })} placeholder="08:00" className="w-full px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />

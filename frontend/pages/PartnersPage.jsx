@@ -114,12 +114,12 @@ function PartnersView({ showToast }) {
         {editCustomer && (
           <form onSubmit={saveEditCust} className="space-y-3 text-xs">
             <input value={editCustomer.name} onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })} placeholder="Tên khách hàng *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" required />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={editCustomer.phone || ''} onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })} placeholder="Số điện thoại" className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" />
               <input value={editCustomer.email || ''} onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })} placeholder="Email" className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" />
             </div>
             <input value={editCustomer.address || ''} onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })} placeholder="Địa chỉ" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <select value={editCustomer.district || 'Quận 1'} onChange={(e) => setEditCustomer({ ...editCustomer, district: e.target.value })} className="px-2 py-2.5 rounded-xl border border-sky-200 bg-slate-50"><option>Quận 1</option><option>Quận 3</option><option>TP. Thủ Đức</option><option>Dĩ An</option><option>Biên Hòa</option></select>
               <select value={editCustomer.province || 'TP.HCM'} onChange={(e) => setEditCustomer({ ...editCustomer, province: e.target.value })} className="px-2 py-2.5 rounded-xl border border-sky-200 bg-slate-50"><option>TP.HCM</option><option>Bình Dương</option><option>Đồng Nai</option></select>
               <select value={editCustomer.customer_tier || 'Standard'} onChange={(e) => setEditCustomer({ ...editCustomer, customer_tier: e.target.value })} className="px-2 py-2.5 rounded-xl border border-sky-200 bg-slate-50"><option>Standard</option><option>VIP</option><option>Enterprise</option></select>
@@ -136,7 +136,7 @@ function PartnersView({ showToast }) {
         {editSupplier && (
           <form onSubmit={saveEditSupp} className="space-y-3 text-xs">
             <input value={editSupplier.name} onChange={(e) => setEditSupplier({ ...editSupplier, name: e.target.value })} placeholder="Tên NCC *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" required />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={editSupplier.phone || ''} onChange={(e) => setEditSupplier({ ...editSupplier, phone: e.target.value })} placeholder="Số điện thoại" className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" />
               <input value={editSupplier.email || ''} onChange={(e) => setEditSupplier({ ...editSupplier, email: e.target.value })} placeholder="Email" className="px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50" />
             </div>
@@ -197,12 +197,12 @@ function PartnersView({ showToast }) {
           <form onSubmit={addCust} className="lg:col-span-4 eco-card-glow bg-white p-6 rounded-3xl border border-sky-100 shadow-sm space-y-2.5 text-xs h-fit">
             <h4 className="font-extrabold text-sm m-0">➕ Thêm Khách Hàng</h4>
             <input value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} placeholder="Tên khách hàng *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" required />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} placeholder="Số điện thoại" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
               <input value={cForm.email} onChange={(e) => setCForm({ ...cForm, email: e.target.value })} placeholder="Email" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
             </div>
             <input value={cForm.address} onChange={(e) => setCForm({ ...cForm, address: e.target.value })} placeholder="Địa chỉ" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <select value={cForm.district} onChange={(e) => setCForm({ ...cForm, district: e.target.value })} className="px-2 py-2 rounded-xl border border-sky-200 bg-slate-50/70"><option>Quận 1</option><option>Quận 3</option><option>TP. Thủ Đức</option><option>Dĩ An</option><option>Biên Hòa</option></select>
               <select value={cForm.province} onChange={(e) => setCForm({ ...cForm, province: e.target.value })} className="px-2 py-2 rounded-xl border border-sky-200 bg-slate-50/70"><option>TP.HCM</option><option>Bình Dương</option><option>Đồng Nai</option></select>
               <select value={cForm.customer_tier} onChange={(e) => setCForm({ ...cForm, customer_tier: e.target.value })} className="px-2 py-2 rounded-xl border border-sky-200 bg-slate-50/70"><option>Standard</option><option>VIP</option><option>Enterprise</option></select>
@@ -233,7 +233,7 @@ function PartnersView({ showToast }) {
           <form onSubmit={addSupp} className="lg:col-span-4 eco-card-glow bg-white p-6 rounded-3xl border border-sky-100 shadow-sm space-y-2.5 text-xs h-fit">
             <h4 className="font-extrabold text-sm m-0">➕ Thêm Nhà Cung Cấp</h4>
             <input value={sForm.name} onChange={(e) => setSForm({ ...sForm, name: e.target.value })} placeholder="Tên NCC *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" required />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input value={sForm.phone} onChange={(e) => setSForm({ ...sForm, phone: e.target.value })} placeholder="Điện thoại" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
               <input value={sForm.email} onChange={(e) => setSForm({ ...sForm, email: e.target.value })} placeholder="Email" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
             </div>

@@ -44,15 +44,15 @@ function DashboardView({ onNavigate, showToast }) {
     }));
   }, [data]);
 
-  if (!data) return <div className="p-10 text-center text-xs font-bold text-text-sub">⏳ Đang tải dữ liệu thực tế từ SQLite...</div>;
+  if (!data) return <LoadingSkeleton rows={4} />;
 
   const f = data.financial;
   const e = data.esg;
   const inv = data.inventory;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <div className="eco-card-glow bg-white/95 p-5 rounded-3xl border border-sky-100 shadow-card"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-brand-600 flex items-center justify-center"><i className="fa-solid fa-cloud-arrow-down"></i></div><div className="text-xs font-bold text-slate-500">Giảm CO₂</div></div><div className="font-mono text-3xl font-extrabold text-slate-900 my-2">-{e.co2_reduction_pct}%</div><div className="text-xs font-bold text-brand-700 bg-emerald-50 border border-emerald-200/70 w-fit px-2.5 py-1 rounded-full">Giảm {e.co2_saved_kg} kg CO₂</div></div>
         <div className="eco-card-glow bg-white/95 p-5 rounded-3xl border border-sky-100 shadow-card"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center"><i className="fa-solid fa-wallet"></i></div><div className="text-xs font-bold text-slate-500">Tiết kiệm chi phí</div></div><div className="font-mono text-3xl font-extrabold text-slate-900 my-2">{f.cost_saving_pct}%</div><div className="text-xs font-bold text-sky-700 bg-sky-50 border border-sky-200/70 w-fit px-2.5 py-1 rounded-full">Tổng {f.total_orders} đơn hàng</div></div>
         <div className="eco-card-glow bg-white/95 p-5 rounded-3xl border border-sky-100 shadow-card"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center"><i className="fa-solid fa-truck"></i></div><div className="text-xs font-bold text-slate-500">Đang vận chuyển</div></div><div className="font-mono text-3xl font-extrabold text-slate-900 my-2">{f.shipping_orders} đơn</div><div className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/70 w-fit px-2.5 py-1 rounded-full">Né cấm tải {data.config.restricted_time_window.join('-')}</div></div>
@@ -69,13 +69,13 @@ function DashboardView({ onNavigate, showToast }) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-7 eco-card-glow bg-white/95 p-6 rounded-3xl border border-sky-100 shadow-card">
-          <div className="flex justify-between items-center mb-3"><h3 className="font-extrabold text-base text-slate-900 m-0">Xu hướng Chi phí vs Doanh thu (DB)</h3><span className="text-xs font-semibold text-brand-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">T7 - T11 / 2026</span></div>
-          <div className="h-[270px] w-full"><canvas ref={chartRef}></canvas></div>
+        <div className="lg:col-span-7 eco-card-glow bg-white/95 p-4 sm:p-6 rounded-3xl border border-sky-100 shadow-card">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 className="font-extrabold text-sm sm:text-base text-slate-900 m-0">Xu hướng Chi phí vs Doanh thu (DB)</h3><span className="text-xs font-semibold text-brand-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">T7 - T11 / 2026</span></div>
+          <div className="h-[220px] sm:h-[260px] lg:h-[clamp(240px,30dvh,340px)] w-full"><canvas ref={chartRef}></canvas></div>
         </div>
-        <div className="lg:col-span-5 eco-card-glow bg-white/95 p-6 rounded-3xl border border-sky-100 shadow-card">
-          <div className="flex justify-between items-center mb-3"><h3 className="font-extrabold text-base text-slate-900 m-0">Bản đồ Tuyến Vận Chuyển</h3><button onClick={() => onNavigate('routing')} className="text-[11px] font-bold text-white bg-gradient-to-r from-brand-600 to-emerald-500 px-3.5 py-1.5 rounded-full shadow-sm hover:shadow-md transition">Tối ưu thêm →</button></div>
-          <EcoLeafletMap depot={data.depot} routes={dashRoutes} showRestrictedZone={true} heightClass="h-[250px]" defaultTheme="osm" openDepotPopup={true} />
+        <div className="lg:col-span-5 eco-card-glow bg-white/95 p-4 sm:p-6 rounded-3xl border border-sky-100 shadow-card">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-3"><h3 className="font-extrabold text-sm sm:text-base text-slate-900 m-0">Bản đồ Tuyến Vận Chuyển</h3><button onClick={() => onNavigate('routing')} className="text-[11px] font-bold text-white bg-gradient-to-r from-brand-600 to-emerald-500 px-3.5 py-1.5 rounded-full shadow-sm hover:shadow-md transition">Tối ưu thêm →</button></div>
+          <EcoLeafletMap depot={data.depot} routes={dashRoutes} showRestrictedZone={true} heightClass="h-[220px] sm:h-[250px] lg:h-[clamp(240px,30dvh,340px)]" defaultTheme="osm" openDepotPopup={true} />
         </div>
       </div>
 

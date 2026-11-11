@@ -14,6 +14,29 @@ import importlib
 import os
 import sys
 
+
+def _load_dotenv_file():
+    """Nạp biến môi trường từ file .env ở thư mục gốc dự án (nếu tồn tại) bằng Python stdlib."""
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    if not os.path.isfile(env_path):
+        return
+    try:
+        with open(env_path, "r", encoding="utf-8") as fh:
+            for raw_line in fh:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key:
+                    os.environ.setdefault(key, value)
+    except OSError:
+        pass
+
+
+_load_dotenv_file()
+
 # ==============================================================================
 # 0. CẤU HÌNH MÔI TRƯỜNG, BẢO MẬT & SERVER
 # ==============================================================================

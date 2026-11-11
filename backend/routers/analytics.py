@@ -20,6 +20,7 @@ from backend.services.forecasting_service import (
 from backend.services.inventory_service import get_all_products
 from backend.services.routing_service import (
     get_pending_orders,
+    get_road_route_geometry,
     get_saved_routes,
     optimize_100_points,
     optimize_routes_for_orders,
@@ -48,6 +49,17 @@ class RouteOptReq(BaseModel):
     enforce_time_window: bool = True
     save_to_db: bool = True
     scope_count: int = 100
+    algorithm: str = "auto"
+    multi_vehicle: bool = False
+
+
+class RoadPoint(BaseModel):
+    lat: float
+    lng: float
+
+
+class RoadGeometryReq(BaseModel):
+    coordinates: List[RoadPoint] = []
 
 
 @router.get("/api/forecast")
@@ -129,10 +141,19 @@ def api_routing_optimize(req: RouteOptReq, user: Dict[str, Any] = Depends(requir
         enforce_time_window=req.enforce_time_window,
         save_to_db=req.save_to_db,
         user_id=user["id"],
+        algorithm=req.algorithm,
+        multi_vehicle=req.multi_vehicle,
     )
     if not res:
         raise HTTPException(status_code=400, detail="Không thể tối ưu vì thiếu đơn hàng hợp lệ.")
     return {"ok": True, "mode": "orders", "result": res, "saved_routes": get_saved_routes(limit=15)}
+
+
+@router.post("/api/routing/road-geometry")
+def api_routing_road_geometry(req: RoadGeometryReq):
+    if len(req.coordinates) > 150:
+        raise HTTPException(status_code=400, detail="Tối đa 150 điểm dừng mỗi tuyến đường.")
+    return get_road_route_geometry([(pt.lat, pt.lng) for pt in req.coordinates])
 
 
 @router.get("/api/reports")

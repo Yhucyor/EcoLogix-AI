@@ -102,11 +102,11 @@ function VehiclesView({ showToast }) {
           <input value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value })} placeholder="Biển số (VD: 51D-998.12) *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:border-brand-500" required />
           <input value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value })} placeholder="Tên xe *" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70 focus:bg-white focus:outline-none focus:border-brand-500" required />
           <input value={form.vehicle_type} onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })} placeholder="Loại xe" className="w-full px-3.5 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input type="number" value={form.max_load_kg} onChange={(e) => setForm({ ...form, max_load_kg: Number(e.target.value) })} placeholder="Tải trọng (kg)" className="px-3 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70" />
             <select value={form.fuel_type} onChange={(e) => setForm({ ...form, fuel_type: e.target.value })} className="px-3 py-2.5 rounded-xl border border-sky-200 bg-slate-50/70"><option>Diesel</option><option>Xăng E5</option><option>Electric</option></select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input type="number" step="0.5" value={form.fuel_consumption_per_100km} onChange={(e) => setForm({ ...form, fuel_consumption_per_100km: Number(e.target.value) })} placeholder="L/100km" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
             <input type="number" step="500" value={form.operational_cost_per_km} onChange={(e) => setForm({ ...form, operational_cost_per_km: Number(e.target.value) })} placeholder="VNĐ/km" className="px-3 py-2 rounded-xl border border-sky-200 bg-slate-50/70" />
           </div>
@@ -117,7 +117,7 @@ function VehiclesView({ showToast }) {
       <ModalShell open={!!editVeh} title={`✏️ Cập nhật phương tiện ${editVeh?.plate_number || ''}`} onClose={() => setEditVeh(null)}>
         {editVeh && (
           <form onSubmit={saveEdit} className="space-y-3 text-xs">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Tên phương tiện *</label>
                 <input value={editVeh.vehicle_name} onChange={(e) => setEditVeh({ ...editVeh, vehicle_name: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-sky-200 bg-slate-50" required />
@@ -127,7 +127,7 @@ function VehiclesView({ showToast }) {
                 <input value={editVeh.vehicle_type} onChange={(e) => setEditVeh({ ...editVeh, vehicle_type: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-sky-200 bg-slate-50" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Tải trọng tối đa (kg)</label>
                 <input type="number" value={editVeh.max_load_kg} onChange={(e) => setEditVeh({ ...editVeh, max_load_kg: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl border border-sky-200 bg-slate-50" required />
@@ -139,7 +139,7 @@ function VehiclesView({ showToast }) {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-slate-600 block mb-1">Định mức (L/100km)</label>
                 <input type="number" step="0.5" value={editVeh.fuel_consumption_per_100km} onChange={(e) => setEditVeh({ ...editVeh, fuel_consumption_per_100km: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl border border-sky-200 bg-slate-50" />

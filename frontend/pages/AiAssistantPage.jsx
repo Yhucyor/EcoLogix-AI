@@ -54,7 +54,7 @@ function AiAssistantView({ user, preloadedPrompt, clearPreloaded, onNavigate, sh
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-8 eco-card-glow bg-white p-6 rounded-3xl border border-sky-100 shadow-sm flex flex-col justify-between h-[580px]">
+        <div className="lg:col-span-8 eco-card-glow bg-white p-4 sm:p-6 rounded-3xl border border-sky-100 shadow-sm flex flex-col justify-between h-[clamp(380px,64dvh,640px)]">
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-sky-100">
             <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800">
               <span className="w-2 h-2 rounded-full bg-brand-500 pulse-dot"></span>
@@ -68,13 +68,13 @@ function AiAssistantView({ user, preloadedPrompt, clearPreloaded, onNavigate, sh
           <div className="overflow-y-auto space-y-4 custom-scrollbar pr-2 flex-1">
             {messages.map((m, idx) => (
               <div key={idx} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`max-w-[82%] p-4 rounded-2xl text-xs whitespace-pre-line leading-relaxed ${
+                <div className={`max-w-[92%] sm:max-w-[82%] p-3.5 sm:p-4 rounded-2xl text-xs whitespace-pre-line leading-relaxed ${
                   m.sender === 'user' ? 'bg-emerald-100 text-text-main font-semibold rounded-br-none border border-emerald-200' : 'bg-sky-50/60 text-text-main rounded-bl-none border border-sky-100'
                 }`}>
                   {m.content}
                 </div>
                 {m.trace && m.trace.length > 0 && (
-                  <details className="mt-1.5 max-w-[82%] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] text-slate-600">
+                  <details className="mt-1.5 max-w-[92%] sm:max-w-[82%] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] text-slate-600">
                     <summary className="font-bold cursor-pointer text-brand-700">🔍 Xem chuỗi suy luận 6 Agents ({m.trace.length} bước)</summary>
                     <ul className="mt-1.5 space-y-1 list-disc pl-4">
                       {m.trace.map((st, sIdx) => <li key={sIdx}><strong>{st.agent}:</strong> {st.action}</li>)}

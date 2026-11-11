@@ -9,7 +9,23 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend import config
+from backend.database.connection import execute_query
+from backend.database.models import init_database
+from backend.database.seed import seed_all
 from backend.routers import ai, analytics, auth, dashboard, inventory, orders, partners, system, vehicles
+
+
+def _ensure_bootstrap_data():
+    init_database()
+    try:
+        rows = execute_query("SELECT COUNT(*) AS cnt FROM users;")
+        if rows and int(rows[0]["cnt"]) == 0:
+            seed_all()
+    except Exception:
+        pass
+
+
+_ensure_bootstrap_data()
 
 app = FastAPI(title="EcoLogix AI API", version="2.1.0")
 

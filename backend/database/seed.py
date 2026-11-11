@@ -6,7 +6,7 @@ Nạp dữ liệu mẫu thực tế, liên kết chặt chẽ cho TP.HCM, Bình 
 import json
 import random
 from datetime import datetime, timedelta
-from backend.database.connection import get_db
+from backend.database.connection import get_db, get_db_dialect
 from backend.database.models import init_database
 from backend.utils.helpers import hash_password
 
@@ -14,6 +14,7 @@ from backend.utils.helpers import hash_password
 def seed_all():
     init_database()
     random.seed(2026)
+    dialect = get_db_dialect()
 
     with get_db() as conn:
         cursor = conn.cursor()
@@ -26,9 +27,16 @@ def seed_all():
             "inventory_transactions", "inventory", "products", "warehouses",
             "users", "roles", "companies",
         ]
-        for t in tables_clear_order:
-            cursor.execute(f"DELETE FROM {t};")
-        cursor.execute("DELETE FROM sqlite_sequence;")
+        if dialect == "mysql":
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+            for t in tables_clear_order:
+                cursor.execute(f"DELETE FROM {t};")
+                cursor.execute(f"ALTER TABLE {t} AUTO_INCREMENT = 1;")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        else:
+            for t in tables_clear_order:
+                cursor.execute(f"DELETE FROM {t};")
+            cursor.execute("DELETE FROM sqlite_sequence;")
 
         # 1. ROLES (RBAC)
         roles = [

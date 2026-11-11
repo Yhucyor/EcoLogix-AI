@@ -12,6 +12,7 @@ from backend.services.auth_service import (
     request_password_reset,
     reset_password,
     complete_onboarding,
+    get_onboarding_context,
 )
 from backend.utils.helpers import log_activity
 
@@ -87,18 +88,18 @@ def api_login(req: LoginReq):
 
 @router.post("/api/auth/register")
 def api_register(req: RegisterReq):
-    ok, msg, otp = register_user(req.name, req.email, req.password, req.phone, req.role, req.company_name)
+    ok, msg, otp, email_sent = register_user(req.name, req.email, req.password, req.phone, req.role, req.company_name)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-    return {"ok": True, "message": msg, "demo_otp": otp}
+    return {"ok": True, "message": msg, "demo_otp": otp, "email_sent": email_sent}
 
 
 @router.post("/api/auth/resend-otp")
 def api_resend_otp(req: ResendOtpReq):
-    ok, msg, otp = resend_verification_otp(req.email)
+    ok, msg, otp, email_sent = resend_verification_otp(req.email)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-    return {"ok": True, "message": msg, "demo_otp": otp}
+    return {"ok": True, "message": msg, "demo_otp": otp, "email_sent": email_sent}
 
 
 @router.post("/api/auth/verify")
@@ -111,10 +112,10 @@ def api_verify(req: VerifyReq):
 
 @router.post("/api/auth/forgot")
 def api_forgot(req: ForgotReq):
-    ok, msg, token = request_password_reset(req.email)
+    ok, msg, token, email_sent = request_password_reset(req.email)
     if not ok:
         raise HTTPException(status_code=404, detail=msg)
-    return {"ok": True, "message": msg, "demo_token": token}
+    return {"ok": True, "message": msg, "demo_token": token, "email_sent": email_sent}
 
 
 @router.post("/api/auth/reset")
@@ -137,11 +138,18 @@ def api_logout(user: Optional[Dict[str, Any]] = Depends(get_optional_user)):
     return {"ok": True, "message": "Đã đăng xuất phiên làm việc an toàn."}
 
 
+@router.get("/api/onboarding/current")
+def api_onboarding_current(user: Optional[Dict[str, Any]] = Depends(get_optional_user)):
+    if not user:
+        return {"has_company": False, "company": None}
+    return get_onboarding_context(user["id"])
+
+
 @router.post("/api/onboarding")
 def api_onboarding(req: OnboardingReq, user: Optional[Dict[str, Any]] = Depends(get_optional_user)):
     uid = user["id"] if user else req.user_id
     ok, msg, res = complete_onboarding(req.model_dump(), user_id=uid)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
-    return {"ok": True, "message": msg, "data": res}
+    return {"ok": True, "message": msg, "data": res, "user": res.get("user")}
 

@@ -80,7 +80,7 @@ def _build_daily_history(product_id: int, days: int = 60) -> pd.DataFrame:
         """,
         (product_id,),
     )
-    real_map = {r["d_str"]: float(r["qty"]) for r in order_rows}
+    real_map = {str(r["d_str"]): float(r["qty"]) for r in order_rows}
     custom_map = _load_custom_history_map(product_id)
 
     rng = np.random.default_rng(seed=product_id * 2026)
