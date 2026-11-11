@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- 13. ROUTES
 CREATE TABLE IF NOT EXISTS routes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id INTEGER,
     route_code VARCHAR(100) UNIQUE NOT NULL,
     vehicle_id INTEGER,
     route_date DATE,
@@ -200,6 +201,7 @@ CREATE TABLE IF NOT EXISTS routes (
     saved_cost_vnd REAL DEFAULT 0,
     is_optimized INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(company_id) REFERENCES companies(id),
     FOREIGN KEY(vehicle_id) REFERENCES vehicles(id)
 );
 
@@ -382,6 +384,7 @@ def init_database():
         _ensure_column(cur, "users", "is_verified", "INTEGER DEFAULT 1", dialect, existing_map)
         _ensure_column(cur, "users", "has_company", "INTEGER DEFAULT 1", dialect, existing_map)
         _ensure_column(cur, "users", "reset_token", "VARCHAR(255)" if dialect == "mysql" else "TEXT", dialect, existing_map)
+        _ensure_column(cur, "routes", "company_id", "INTEGER", dialect, existing_map)
         _ensure_column(cur, "routes", "baseline_distance_km", "REAL DEFAULT 0", dialect, existing_map)
         _ensure_column(cur, "routes", "saved_distance_km", "REAL DEFAULT 0", dialect, existing_map)
         _ensure_column(cur, "routes", "fuel_saved_liters", "REAL DEFAULT 0", dialect, existing_map)
@@ -391,6 +394,17 @@ def init_database():
         _ensure_column(cur, "forecasts", "safety_stock", "INTEGER DEFAULT 0", dialect, existing_map)
         _ensure_column(cur, "forecasts", "reorder_point", "INTEGER DEFAULT 0", dialect, existing_map)
         _ensure_column(cur, "forecasts", "accuracy_pct", "REAL DEFAULT 94.0", dialect, existing_map)
+
+        # Cập nhật company_id cho các tuyến vận tải chưa có
+        try:
+            cur.execute("""
+            UPDATE routes r
+            SET company_id = (SELECT v.company_id FROM vehicles v WHERE v.id = r.vehicle_id)
+            WHERE r.company_id IS NULL;
+            """)
+            cur.execute("UPDATE routes SET company_id = 1 WHERE company_id IS NULL;")
+        except Exception:
+            pass
     print(f"✅ Đã khởi tạo & đồng bộ schema 24 bảng dữ liệu cho EcoLogix AI ({dialect}).")
 
 

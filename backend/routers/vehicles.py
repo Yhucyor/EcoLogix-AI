@@ -26,12 +26,14 @@ class VehicleReq(BaseModel):
 
 
 @router.get("")
-def api_vehicles(_: Dict[str, Any] = Depends(get_current_user)):
-    return {"vehicles": get_vehicles_with_stats()}
+def api_vehicles(user: Dict[str, Any] = Depends(get_current_user)):
+    company_id = user.get("company_id") or 1
+    return {"vehicles": get_vehicles_with_stats(company_id=company_id)}
 
 
 @router.post("")
 def api_add_vehicle(req: VehicleReq, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager", "Dispatcher"))):
+    company_id = user.get("company_id") or 1
     ok, msg = add_vehicle(
         req.plate_number,
         req.vehicle_name,
@@ -40,6 +42,7 @@ def api_add_vehicle(req: VehicleReq, user: Dict[str, Any] = Depends(require_role
         req.fuel_type,
         req.fuel_consumption_per_100km,
         req.operational_cost_per_km,
+        company_id=company_id,
         user_id=user["id"],
     )
     if not ok:
@@ -49,6 +52,7 @@ def api_add_vehicle(req: VehicleReq, user: Dict[str, Any] = Depends(require_role
 
 @router.put("/{vehicle_id}")
 def api_update_vehicle(vehicle_id: int, req: VehicleReq, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager", "Dispatcher"))):
+    company_id = user.get("company_id") or 1
     ok, msg = update_vehicle(
         vehicle_id,
         req.vehicle_name,
@@ -58,6 +62,7 @@ def api_update_vehicle(vehicle_id: int, req: VehicleReq, user: Dict[str, Any] = 
         req.fuel_consumption_per_100km,
         req.operational_cost_per_km,
         req.status,
+        company_id=company_id,
         user_id=user["id"],
     )
     if not ok:
@@ -67,7 +72,8 @@ def api_update_vehicle(vehicle_id: int, req: VehicleReq, user: Dict[str, Any] = 
 
 @router.delete("/{vehicle_id}")
 def api_delete_vehicle(vehicle_id: int, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
-    ok, msg = delete_vehicle(vehicle_id, user_id=user["id"])
+    company_id = user.get("company_id") or 1
+    ok, msg = delete_vehicle(vehicle_id, company_id=company_id, user_id=user["id"])
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     return {"ok": True, "message": msg}

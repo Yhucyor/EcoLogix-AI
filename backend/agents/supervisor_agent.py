@@ -17,8 +17,8 @@ from backend.agents.esg_agent import run_esg_agent
 from backend import config
 
 
-def _get_llm_config() -> tuple:
-    rows = execute_query("SELECT setting_key, setting_value FROM system_settings WHERE company_id = 1;")
+def _get_llm_config(company_id: int = 1) -> tuple:
+    rows = execute_query("SELECT setting_key, setting_value FROM system_settings WHERE company_id = ?;", (company_id,))
     cfg_map = {r["setting_key"]: r["setting_value"] for r in rows}
     return cfg_map.get("AI_PROVIDER_MODE", "Hybrid-Demo"), (cfg_map.get("LLM_API_KEY") or "").strip()
 
@@ -51,7 +51,7 @@ def _try_external_gemini(api_key: str, query: str, context_summary: str) -> Opti
         return None
 
 
-def orchestrate_query(user_query: str) -> Tuple[List[Dict[str, str]], str, Optional[Dict[str, Any]]]:
+def orchestrate_query(user_query: str, company_id: int = 1) -> Tuple[List[Dict[str, str]], str, Optional[Dict[str, Any]]]:
     q = (user_query or "").lower()
     trace: List[Dict[str, str]] = []
     action_button: Optional[Dict[str, Any]] = None

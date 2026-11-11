@@ -88,7 +88,12 @@ def authenticate_user(email: str, password: str) -> Tuple[bool, Optional[Dict[st
         return False, None, "Tài khoản chưa được xác thực OTP. Vui lòng kích hoạt tài khoản trước khi đăng nhập."
 
     user_safe = _format_user_safe(user)
-    token = create_access_token({"sub": str(user_safe["id"]), "email": user_safe["email"], "role": user_safe["role"]})
+    token = create_access_token({
+        "sub": str(user_safe["id"]),
+        "email": user_safe["email"],
+        "role": user_safe["role"],
+        "company_id": user_safe["company_id"],
+    })
     log_activity(user["id"], "USER_LOGIN", "users", user["id"], f"Đăng nhập thành công ({user['role']})")
     return True, {"user": user_safe, "access_token": token}, "Đăng nhập thành công!"
 
@@ -125,16 +130,29 @@ def register_user(
     otp_code = f"{secrets.randbelow(900000) + 100000}"
     pw_hash = hash_password(password)
     has_comp = 1 if (company_name and company_name.strip()) else 0
+    c_name = company_name.strip() if has_comp else f"Doanh nghiệp của {name.strip()}"
+
+    from backend.database.seed import seed_starter_company_data
+    comp_id = execute_insert(
+        """
+        INSERT INTO companies (name, tax_code, industry, size, address, city, phone, email)
+        VALUES (?, ?, 'Phân phối hàng tiêu dùng (FMCG)', 'SMEs (10 - 50 nhân viên)', 'TP. Hồ Chí Minh', 'TP. Hồ Chí Minh', ?, ?);
+        """,
+        (c_name, f"03{secrets.randbelow(90000000) + 10000000}", phone.strip(), clean_email),
+    )
+
     u_id = execute_insert(
         """
         INSERT INTO users (company_id, name, email, password_hash, role, phone, is_verified, has_company, reset_token)
-        VALUES (1, ?, ?, ?, ?, ?, 0, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?);
         """,
-        (name.strip(), clean_email, pw_hash, normalized_role, phone.strip(), has_comp, otp_code),
+        (comp_id, name.strip(), clean_email, pw_hash, normalized_role, phone.strip(), has_comp, otp_code),
     )
-    if has_comp:
-        execute_update("UPDATE companies SET name = ? WHERE id = 1;", (company_name.strip(),))
-    log_activity(u_id, "USER_REGISTER", "users", u_id, f"Đăng ký tài khoản mới {clean_email} ({normalized_role})")
+
+    # Khởi tạo dữ liệu mẫu độc lập cho doanh nghiệp mới
+    seed_starter_company_data(comp_id, c_name, admin_user_id=u_id)
+
+    log_activity(u_id, "USER_REGISTER", "users", u_id, f"Đăng ký tài khoản mới {clean_email} ({normalized_role}) cho {c_name} (ID: {comp_id})")
 
     email_res = send_verification_otp_email(clean_email, name.strip(), otp_code, is_resend=False)
     if email_res.get("email_sent"):
@@ -207,7 +225,12 @@ def reset_password(email: str, token: str, new_password: str) -> Tuple[bool, str
     return True, "Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại."
 
 
-def get_all_users() -> list:
+def get_all_users(company_id: Optional[int] = None) -> list:
+    if company_id:
+        return rows_to_dicts(execute_query(
+            "SELECT id, company_id, name, email, role, phone, is_verified, created_at FROM users WHERE company_id = ? ORDER BY id ASC;",
+            (company_id,),
+        ))
     return rows_to_dicts(execute_query(
         "SELECT id, company_id, name, email, role, phone, is_verified, created_at FROM users ORDER BY id ASC;"
     ))
@@ -217,10 +240,13 @@ def get_all_roles() -> list:
     return rows_to_dicts(execute_query("SELECT * FROM roles ORDER BY id ASC;"))
 
 
-def update_user_role(user_id: int, new_role: str) -> bool:
+def update_user_role(user_id: int, new_role: str, company_id: Optional[int] = None) -> bool:
     if new_role not in VALID_ROLES:
         return False
-    updated = execute_update("UPDATE users SET role = ? WHERE id = ?;", (new_role, user_id))
+    if company_id:
+        updated = execute_update("UPDATE users SET role = ? WHERE id = ? AND company_id = ?;", (new_role, user_id, company_id))
+    else:
+        updated = execute_update("UPDATE users SET role = ? WHERE id = ?;", (new_role, user_id))
     log_activity(user_id, "UPDATE_ROLE", "users", user_id, f"Đổi vai trò thành {new_role}")
     return updated > 0
 
@@ -245,46 +271,78 @@ def complete_onboarding(payload: Dict[str, Any], user_id: int = 1) -> Tuple[bool
         if not ok_tax:
             return False, msg_tax, {}
 
-    execute_update(
-        """
-        UPDATE companies
-        SET name = ?, tax_code = ?, address = ?, industry = ?, size = ?, city = ?
-        WHERE id = 1;
-        """,
-        (
-            comp_name,
-            tax_code or "0317892345",
-            payload.get("address", "TP. Thủ Đức, TP.HCM"),
-            payload.get("industry", "Phân phối hàng tiêu dùng (FMCG)"),
-            payload.get("size", "SMEs (10 - 50 nhân viên)"),
-            payload.get("city", "TP. Hồ Chí Minh"),
-        ),
-    )
+    user_rows = execute_query("SELECT id, company_id FROM users WHERE id = ?;", (user_id,))
+    if not user_rows:
+        return False, "Không tìm thấy người dùng.", {}
+    user_rec = dict(user_rows[0])
+    company_id = user_rec.get("company_id")
+
+    # Đảm bảo mã số thuế không bị trùng lặp giữa các doanh nghiệp
+    clean_tax = tax_code.strip() if tax_code else f"03{secrets.randbelow(90000000)+10000000}"
+    if company_id:
+        dup = execute_query("SELECT id FROM companies WHERE tax_code = ? AND id != ?;", (clean_tax, company_id))
+        if dup:
+            clean_tax = f"{clean_tax}-{secrets.randbelow(900)+100}"
+
+    if not company_id:
+        company_id = execute_insert(
+            """
+            INSERT INTO companies (name, tax_code, address, industry, size, city)
+            VALUES (?, ?, ?, ?, ?, ?);
+            """,
+            (
+                comp_name,
+                clean_tax,
+                payload.get("address", "TP. Thủ Đức, TP.HCM"),
+                payload.get("industry", "Phân phối hàng tiêu dùng (FMCG)"),
+                payload.get("size", "SMEs (10 - 50 nhân viên)"),
+                payload.get("city", "TP. Hồ Chí Minh"),
+            ),
+        )
+        execute_update("UPDATE users SET company_id = ?, has_company = 1 WHERE id = ?;", (company_id, user_id))
+    else:
+        execute_update(
+            """
+            UPDATE companies
+            SET name = ?, tax_code = ?, address = ?, industry = ?, size = ?, city = ?
+            WHERE id = ?;
+            """,
+            (
+                comp_name,
+                clean_tax,
+                payload.get("address", "TP. Thủ Đức, TP.HCM"),
+                payload.get("industry", "Phân phối hàng tiêu dùng (FMCG)"),
+                payload.get("size", "SMEs (10 - 50 nhân viên)"),
+                payload.get("city", "TP. Hồ Chí Minh"),
+                company_id,
+            ),
+        )
 
     wh_name = (payload.get("warehouse_name") or "").strip()
     if wh_name:
-        wh_code = (payload.get("warehouse_code") or f"WH-NEW-{secrets.randbelow(900)+100}").strip()
-        existing_wh = execute_query("SELECT id FROM warehouses WHERE code = ?;", (wh_code,))
+        wh_code = (payload.get("warehouse_code") or f"WH-C{company_id}-{secrets.randbelow(900)+100}").strip()
+        existing_wh = execute_query("SELECT id FROM warehouses WHERE company_id = ? AND code = ?;", (company_id, wh_code))
         if not existing_wh:
             execute_insert(
                 """
                 INSERT INTO warehouses (company_id, name, code, address, lat, lng, capacity_m3, current_utilization_pct, is_central_hub)
-                VALUES (1, ?, ?, ?, 10.845, 106.765, ?, 45.0, 0);
+                VALUES (?, ?, ?, ?, 10.845, 106.765, ?, 45.0, 0);
                 """,
-                (wh_name, wh_code, payload.get("warehouse_address", "TP. Thủ Đức, TP.HCM"), float(payload.get("warehouse_capacity", 2500))),
+                (company_id, wh_name, wh_code, payload.get("warehouse_address", "TP. Thủ Đức, TP.HCM"), float(payload.get("warehouse_capacity", 2500))),
             )
 
     plate = (payload.get("vehicle_plate") or "").strip()
     veh_name = (payload.get("vehicle_name") or "").strip()
     if plate and veh_name:
-        existing_v = execute_query("SELECT id FROM vehicles WHERE plate_number = ?;", (plate,))
+        existing_v = execute_query("SELECT id FROM vehicles WHERE company_id = ? AND plate_number = ?;", (company_id, plate))
         if not existing_v:
             execute_insert(
                 """
                 INSERT INTO vehicles (company_id, plate_number, vehicle_name, vehicle_type, max_load_kg, fuel_type, fuel_consumption_per_100km, operational_cost_per_km, status)
-                VALUES (1, ?, ?, ?, ?, ?, ?, ?, 'Available');
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Available');
                 """,
                 (
+                    company_id,
                     plate,
                     veh_name,
                     payload.get("vehicle_type", "Tải nhẹ đô thị"),
@@ -301,12 +359,12 @@ def complete_onboarding(payload: Dict[str, Any], user_id: int = 1) -> Tuple[bool
     tw = list(config.RESTRICTED_TIME_WINDOW)
     config.save_live_config(fuel_price, carbon_tax, max_load, tw[0], tw[1])
 
-    execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = 1 AND setting_key = 'FUEL_PRICE_PER_LITER';", (str(fuel_price),))
-    execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = 1 AND setting_key = 'MAX_VEHICLE_LOAD_KG';", (str(max_load),))
+    execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = ? AND setting_key = 'FUEL_PRICE_PER_LITER';", (str(fuel_price), company_id))
+    execute_update("UPDATE system_settings SET setting_value = ? WHERE company_id = ? AND setting_key = 'MAX_VEHICLE_LOAD_KG';", (str(max_load), company_id))
     if user_id:
         execute_update("UPDATE users SET has_company = 1 WHERE id = ?;", (user_id,))
 
-    log_activity(user_id, "COMPLETE_ONBOARDING", "companies", 1, f"Thiết lập doanh nghiệp {comp_name} hoàn tất")
+    log_activity(user_id, "COMPLETE_ONBOARDING", "companies", company_id, f"Thiết lập doanh nghiệp {comp_name} hoàn tất")
     create_notification(user_id, "Chào mừng đến với EcoLogix AI", f"Hồ sơ vận hành của {comp_name} đã sẵn sàng.", "success")
 
     return True, "Thiết lập doanh nghiệp và dữ liệu vận hành hoàn tất!", {
@@ -320,10 +378,11 @@ def complete_onboarding(payload: Dict[str, Any], user_id: int = 1) -> Tuple[bool
 def get_onboarding_context(user_id: int) -> Dict[str, Any]:
     """Trả về trạng thái doanh nghiệp hiện có và thông số mặc định cho modal tiếp tục/chỉnh sửa."""
     user = get_user_by_id(user_id)
+    company_id = (user.get("company_id") if user else None) or 1
     has_company = bool(user and user.get("has_company"))
-    comp_rows = rows_to_dicts(execute_query("SELECT id, name, tax_code, industry, size, address, city, phone, email FROM companies ORDER BY id ASC LIMIT 1;"))
-    wh_rows = rows_to_dicts(execute_query("SELECT name, code, address FROM warehouses ORDER BY id DESC LIMIT 1;"))
-    veh_rows = rows_to_dicts(execute_query("SELECT vehicle_name, plate_number, max_load_kg, operational_cost_per_km FROM vehicles ORDER BY id DESC LIMIT 1;"))
+    comp_rows = rows_to_dicts(execute_query("SELECT id, name, tax_code, industry, size, address, city, phone, email FROM companies WHERE id = ?;", (company_id,)))
+    wh_rows = rows_to_dicts(execute_query("SELECT name, code, address FROM warehouses WHERE company_id = ? ORDER BY id DESC LIMIT 1;", (company_id,)))
+    veh_rows = rows_to_dicts(execute_query("SELECT vehicle_name, plate_number, max_load_kg, operational_cost_per_km FROM vehicles WHERE company_id = ? ORDER BY id DESC LIMIT 1;", (company_id,)))
     return {
         "has_company": has_company,
         "company": comp_rows[0] if (has_company and comp_rows) else None,

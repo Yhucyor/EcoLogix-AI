@@ -21,7 +21,7 @@ DISTRICT_COORDS = {
 }
 
 
-def get_customers(search: str = "", tier: str = "ALL") -> list:
+def get_customers(company_id: Optional[int] = None, search: str = "", tier: str = "ALL") -> list:
     query = """
     SELECT c.*,
            COALESCE(COUNT(o.id), 0) as order_count,
@@ -31,6 +31,9 @@ def get_customers(search: str = "", tier: str = "ALL") -> list:
     WHERE 1=1
     """
     params = []
+    if company_id:
+        query += " AND c.company_id = ?"
+        params.append(company_id)
     if tier and tier != "ALL":
         query += " AND c.customer_tier = ?"
         params.append(tier)
@@ -42,14 +45,12 @@ def get_customers(search: str = "", tier: str = "ALL") -> list:
     return rows_to_dicts(execute_query(query, tuple(params)))
 
 
-def get_customer_orders(customer_id: int) -> list:
-    return rows_to_dicts(execute_query(
-        "SELECT id, order_code, status, total_weight_kg, total_amount, created_at FROM orders WHERE customer_id = ? ORDER BY id DESC;",
-        (customer_id,),
-    ))
+def get_customer_orders(customer_id: int, company_id: Optional[int] = None) -> list:
+    query = "SELECT id, order_code, status, total_weight_kg, total_amount, created_at FROM orders WHERE customer_id = ? AND (? IS NULL OR company_id = ?) ORDER BY id DESC;"
+    return rows_to_dicts(execute_query(query, (customer_id, company_id, company_id)))
 
 
-def add_customer(name: str, phone: str, email: str, address: str, district: str, province: str, tier: str = "Standard", user_id: int = 1) -> Tuple[bool, str]:
+def add_customer(name: str, phone: str, email: str, address: str, district: str, province: str, tier: str = "Standard", company_id: int = 1, user_id: int = 1) -> Tuple[bool, str]:
     ok, msg = validate_non_empty(name, "Tên khách hàng")
     if not ok:
         return False, msg
@@ -57,42 +58,50 @@ def add_customer(name: str, phone: str, email: str, address: str, district: str,
     c_id = execute_insert(
         """
         INSERT INTO customers (company_id, name, phone, email, address, district, province, lat, lng, customer_tier, total_spent)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);
         """,
-        (name.strip(), phone.strip(), email.strip(), address.strip(), district, province, lat, lng, tier),
+        (company_id, name.strip(), phone.strip(), email.strip(), address.strip(), district, province, lat, lng, tier),
     )
     log_activity(user_id, "CREATE_CUSTOMER", "customers", c_id, f"Thêm khách hàng {name}")
     return True, f"Đã thêm khách hàng `{name}` thành công!"
 
 
-def update_customer(customer_id: int, name: str, phone: str, email: str, address: str, district: str, province: str, tier: str, user_id: int = 1) -> Tuple[bool, str]:
+def update_customer(customer_id: int, name: str, phone: str, email: str, address: str, district: str, province: str, tier: str, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
     ok, msg = validate_non_empty(name, "Tên khách hàng")
     if not ok:
         return False, msg
     lat, lng = DISTRICT_COORDS.get(district, (10.8000, 106.7200))
-    execute_update(
+    cnt = execute_update(
         """
         UPDATE customers SET name = ?, phone = ?, email = ?, address = ?, district = ?, province = ?, lat = ?, lng = ?, customer_tier = ?
-        WHERE id = ?;
+        WHERE id = ? AND (? IS NULL OR company_id = ?);
         """,
-        (name.strip(), phone.strip(), email.strip(), address.strip(), district, province, lat, lng, tier, customer_id),
+        (name.strip(), phone.strip(), email.strip(), address.strip(), district, province, lat, lng, tier, customer_id, company_id, company_id),
     )
+    if cnt == 0:
+        return False, "Không tìm thấy khách hàng."
     log_activity(user_id, "UPDATE_CUSTOMER", "customers", customer_id, f"Cập nhật khách hàng #{customer_id}")
     return True, "Đã cập nhật thông tin khách hàng."
 
 
-def delete_customer(customer_id: int, user_id: int = 1) -> Tuple[bool, str]:
+def delete_customer(customer_id: int, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
+    check = execute_query("SELECT id FROM customers WHERE id = ? AND (? IS NULL OR company_id = ?);", (customer_id, company_id, company_id))
+    if not check:
+        return False, "Không tìm thấy khách hàng."
     used = execute_query("SELECT COUNT(*) as cnt FROM orders WHERE customer_id = ?;", (customer_id,))
     if used and used[0]["cnt"] > 0:
         return False, "Không thể xóa khách hàng đã có lịch sử đơn hàng."
-    execute_update("DELETE FROM customers WHERE id = ?;", (customer_id,))
+    execute_update("DELETE FROM customers WHERE id = ? AND (? IS NULL OR company_id = ?);", (customer_id, company_id, company_id))
     log_activity(user_id, "DELETE_CUSTOMER", "customers", customer_id, f"Xóa khách hàng #{customer_id}")
     return True, "Đã xóa khách hàng."
 
 
-def get_suppliers(search: str = "") -> list:
+def get_suppliers(company_id: Optional[int] = None, search: str = "") -> list:
     query = "SELECT * FROM suppliers WHERE 1=1"
     params = []
+    if company_id:
+        query += " AND company_id = ?"
+        params.append(company_id)
     if search and search.strip():
         kw = f"%{search.strip()}%"
         query += " AND (name LIKE ? OR products_supplied LIKE ? OR address LIKE ?)"
@@ -101,38 +110,40 @@ def get_suppliers(search: str = "") -> list:
     return rows_to_dicts(execute_query(query, tuple(params)))
 
 
-def add_supplier(name: str, phone: str, email: str, address: str, products_supplied: str, debt_vnd: float = 0.0, user_id: int = 1) -> Tuple[bool, str]:
+def add_supplier(name: str, phone: str, email: str, address: str, products_supplied: str, debt_vnd: float = 0.0, company_id: int = 1, user_id: int = 1) -> Tuple[bool, str]:
     ok, msg = validate_non_empty(name, "Tên nhà cung cấp")
     if not ok:
         return False, msg
     s_id = execute_insert(
         """
         INSERT INTO suppliers (company_id, name, phone, email, address, products_supplied, debt_vnd)
-        VALUES (1, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?);
         """,
-        (name.strip(), phone.strip(), email.strip(), address.strip(), products_supplied.strip(), float(debt_vnd)),
+        (company_id, name.strip(), phone.strip(), email.strip(), address.strip(), products_supplied.strip(), float(debt_vnd)),
     )
     log_activity(user_id, "CREATE_SUPPLIER", "suppliers", s_id, f"Thêm nhà cung cấp {name}")
     return True, f"Đã thêm nhà cung cấp `{name}` thành công!"
 
 
-def update_supplier(supplier_id: int, name: str, phone: str, email: str, address: str, products_supplied: str, debt_vnd: float = 0.0, user_id: int = 1) -> Tuple[bool, str]:
+def update_supplier(supplier_id: int, name: str, phone: str, email: str, address: str, products_supplied: str, debt_vnd: float = 0.0, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
     ok, msg = validate_non_empty(name, "Tên nhà cung cấp")
     if not ok:
         return False, msg
-    execute_update(
+    cnt = execute_update(
         """
         UPDATE suppliers
         SET name = ?, phone = ?, email = ?, address = ?, products_supplied = ?, debt_vnd = ?
-        WHERE id = ?;
+        WHERE id = ? AND (? IS NULL OR company_id = ?);
         """,
-        (name.strip(), phone.strip(), email.strip(), address.strip(), products_supplied.strip(), max(0.0, float(debt_vnd)), supplier_id),
+        (name.strip(), phone.strip(), email.strip(), address.strip(), products_supplied.strip(), max(0.0, float(debt_vnd)), supplier_id, company_id, company_id),
     )
+    if cnt == 0:
+        return False, "Không tìm thấy nhà cung cấp."
     log_activity(user_id, "UPDATE_SUPPLIER", "suppliers", supplier_id, f"Cập nhật NCC #{supplier_id}")
     return True, "Đã cập nhật thông tin nhà cung cấp."
 
 
-def update_supplier_debt(supplier_id: int, new_debt_vnd: float, user_id: int = 1) -> Tuple[bool, str]:
+def update_supplier_debt(supplier_id: int, new_debt_vnd: float, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
     execute_update("UPDATE suppliers SET debt_vnd = ? WHERE id = ?;", (max(0.0, float(new_debt_vnd)), supplier_id))
     log_activity(user_id, "UPDATE_SUPPLIER_DEBT", "suppliers", supplier_id, f"Cập nhật công nợ NCC #{supplier_id}: {new_debt_vnd:,.0f} đ")
     return True, "Đã cập nhật công nợ nhà cung cấp."

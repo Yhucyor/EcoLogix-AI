@@ -8,11 +8,13 @@ from backend.utils.helpers import log_activity, create_notification
 from backend.utils.validators import validate_non_empty, validate_positive
 
 
-def get_all_warehouses() -> list:
+def get_all_warehouses(company_id: Optional[int] = None) -> list:
+    if company_id:
+        return rows_to_dicts(execute_query("SELECT * FROM warehouses WHERE company_id = ? ORDER BY is_central_hub DESC, id ASC;", (company_id,)))
     return rows_to_dicts(execute_query("SELECT * FROM warehouses ORDER BY is_central_hub DESC, id ASC;"))
 
 
-def add_warehouse(name: str, code: str, address: str, capacity_m3: float, lat: float = 10.85, lng: float = 106.77, user_id: int = 1) -> Tuple[bool, str]:
+def add_warehouse(name: str, code: str, address: str, capacity_m3: float, lat: float = 10.85, lng: float = 106.77, company_id: int = 1, user_id: int = 1) -> Tuple[bool, str]:
     for val, label in [(name, "Tên kho"), (code, "Mã kho"), (address, "Địa chỉ")]:
         ok, msg = validate_non_empty(val, label)
         if not ok:
@@ -22,12 +24,12 @@ def add_warehouse(name: str, code: str, address: str, capacity_m3: float, lat: f
     w_id = execute_insert(
         """
         INSERT INTO warehouses (company_id, name, code, address, lat, lng, capacity_m3, current_utilization_pct, is_central_hub)
-        VALUES (1, ?, ?, ?, ?, ?, ?, 0.0, 0);
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0.0, 0);
         """,
-        (name.strip(), code.strip().upper(), address.strip(), float(lat), float(lng), float(capacity_m3)),
+        (company_id, name.strip(), code.strip().upper(), address.strip(), float(lat), float(lng), float(capacity_m3)),
     )
-    # Khởi tạo tồn kho 0 cho các sản phẩm hiện có
-    prods = execute_query("SELECT id, min_stock FROM products;")
+    # Khởi tạo tồn kho 0 cho các sản phẩm hiện có của công ty này
+    prods = execute_query("SELECT id, min_stock FROM products WHERE company_id = ?;", (company_id,))
     for p in prods:
         if not execute_query("SELECT id FROM inventory WHERE warehouse_id = ? AND product_id = ?;", (w_id, p["id"])):
             execute_insert(
@@ -50,18 +52,20 @@ def update_warehouse(warehouse_id: int, name: str, address: str, capacity_m3: fl
     return True, "Đã cập nhật thông tin kho hàng."
 
 
-def get_all_products() -> list:
-    return rows_to_dicts(execute_query("""
+def get_all_products(company_id: Optional[int] = None) -> list:
+    query = """
     SELECT p.*, COALESCE(SUM(i.quantity), 0) as total_stock,
            COALESCE(SUM(i.safety_stock), 0) as total_safety
     FROM products p
     LEFT JOIN inventory i ON p.id = i.product_id
+    WHERE (? IS NULL OR p.company_id = ?)
     GROUP BY p.id
     ORDER BY p.id ASC;
-    """))
+    """
+    return rows_to_dicts(execute_query(query, (company_id, company_id)))
 
 
-def get_inventory_status(warehouse_id: Optional[int] = None, search: str = "") -> list:
+def get_inventory_status(company_id: Optional[int] = None, warehouse_id: Optional[int] = None, search: str = "") -> list:
     query = """
     SELECT i.*, p.sku, p.name as product_name, p.category, p.unit, p.unit_price, p.weight_kg,
            w.name as warehouse_name, w.code as warehouse_code
@@ -71,6 +75,9 @@ def get_inventory_status(warehouse_id: Optional[int] = None, search: str = "") -
     WHERE 1=1
     """
     params = []
+    if company_id:
+        query += " AND p.company_id = ?"
+        params.append(company_id)
     if warehouse_id:
         query += " AND i.warehouse_id = ?"
         params.append(warehouse_id)
@@ -104,7 +111,7 @@ def add_product(company_id: int, sku: str, name: str, category: str, unit: str, 
         (company_id, sku.strip().upper(), name.strip(), category, unit, float(unit_price), float(weight_kg), int(min_stock), int(max_stock)),
     )
 
-    whs = get_all_warehouses()
+    whs = get_all_warehouses(company_id=company_id)
     for w in whs:
         execute_insert(
             """
@@ -223,28 +230,35 @@ def transfer_stock(product_id: int, from_wh_id: int, to_wh_id: int, quantity: in
     return True, f"Đã điều chuyển {qty} đơn vị sang kho đích thành công!"
 
 
-def get_transaction_history(limit: int = 50) -> list:
-    return rows_to_dicts(execute_query(
-        """
-        SELECT t.*, p.sku, p.name as product_name, w.name as warehouse_name
-        FROM inventory_transactions t
-        JOIN products p ON t.product_id = p.id
-        JOIN warehouses w ON t.warehouse_id = w.id
-        ORDER BY t.id DESC
-        LIMIT ?;
-        """,
-        (limit,),
-    ))
+def get_transaction_history(company_id: Optional[int] = None, limit: int = 50) -> list:
+    query = """
+    SELECT t.*, p.sku, p.name as product_name, w.name as warehouse_name
+    FROM inventory_transactions t
+    JOIN products p ON t.product_id = p.id
+    JOIN warehouses w ON t.warehouse_id = w.id
+    WHERE (? IS NULL OR p.company_id = ?)
+    ORDER BY t.id DESC
+    LIMIT ?;
+    """
+    return rows_to_dicts(execute_query(query, (company_id, company_id, limit)))
 
 
-def get_inventory_metrics() -> dict:
-    rows = execute_query("SELECT SUM(quantity) as total_qty, COUNT(*) as total_rows, SUM(CASE WHEN quantity <= safety_stock THEN 1 ELSE 0 END) as low_cnt FROM inventory;")
+def get_inventory_metrics(company_id: Optional[int] = None) -> dict:
+    query = """
+    SELECT SUM(i.quantity) as total_qty, COUNT(i.id) as total_rows,
+           SUM(CASE WHEN i.quantity <= i.safety_stock THEN 1 ELSE 0 END) as low_cnt
+    FROM inventory i
+    JOIN products p ON i.product_id = p.id
+    WHERE (? IS NULL OR p.company_id = ?);
+    """
+    rows = execute_query(query, (company_id, company_id))
     r = rows[0] if rows else {"total_qty": 0, "total_rows": 0, "low_cnt": 0}
-    total_rows = r["total_rows"] or 1
-    health_pct = round(((total_rows - (r["low_cnt"] or 0)) / total_rows) * 100.0, 1)
+    total_rows = int(r["total_rows"] or 0)
+    low_cnt = int(r["low_cnt"] or 0)
+    health_pct = round(((total_rows - low_cnt) / total_rows) * 100.0, 1) if total_rows > 0 else 100.0
     return {
         "total_units": int(r["total_qty"] or 0),
-        "total_sku_slots": int(total_rows),
-        "low_stock_alerts": int(r["low_cnt"] or 0),
+        "total_sku_slots": total_rows,
+        "low_stock_alerts": low_cnt,
         "inventory_efficiency_pct": min(99.5, max(72.0, health_pct)),
     }

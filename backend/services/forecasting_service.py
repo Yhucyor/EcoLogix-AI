@@ -17,9 +17,9 @@ from backend.services.inventory_service import record_transaction
 from backend.utils.helpers import log_activity, create_notification
 
 
-def _load_custom_history_map(product_id: int) -> Dict[str, float]:
+def _load_custom_history_map(product_id: int, company_id: int = 1) -> Dict[str, float]:
     key = f"CUSTOM_HISTORY_SKU_{product_id}"
-    rows = execute_query("SELECT setting_value FROM system_settings WHERE company_id = 1 AND setting_key = ?;", (key,))
+    rows = execute_query("SELECT setting_value FROM system_settings WHERE company_id = ? AND setting_key = ?;", (company_id, key))
     if not rows or not rows[0]["setting_value"]:
         return {}
     try:
@@ -29,7 +29,7 @@ def _load_custom_history_map(product_id: int) -> Dict[str, float]:
         return {}
 
 
-def import_sales_history_csv(product_id: int, csv_text: str, user_id: int = 1) -> Tuple[bool, str, int]:
+def import_sales_history_csv(product_id: int, csv_text: str, company_id: int = 1, user_id: int = 1) -> Tuple[bool, str, int]:
     """Nhập chuỗi bán hàng CSV (cột date,quantity hoặc ngày,số lượng) cho LightGBM."""
     reader = csv.reader(io.StringIO((csv_text or "").strip()))
     rows_list = [r for r in reader if r and any(c.strip() for c in r)]
@@ -56,11 +56,11 @@ def import_sales_history_csv(product_id: int, csv_text: str, user_id: int = 1) -
         return False, "Không đọc được dòng dữ liệu hợp lệ (định dạng gợi ý: 2026-10-01,85).", 0
     key = f"CUSTOM_HISTORY_SKU_{product_id}"
     payload_str = json.dumps(mapping, ensure_ascii=False)
-    existing = execute_query("SELECT id FROM system_settings WHERE company_id = 1 AND setting_key = ?;", (key,))
+    existing = execute_query("SELECT id FROM system_settings WHERE company_id = ? AND setting_key = ?;", (company_id, key))
     if existing:
         execute_update("UPDATE system_settings SET setting_value = ? WHERE id = ?;", (payload_str, existing[0]["id"]))
     else:
-        execute_insert("INSERT INTO system_settings (company_id, setting_key, setting_value) VALUES (1, ?, ?);", (key, payload_str))
+        execute_insert("INSERT INTO system_settings (company_id, setting_key, setting_value) VALUES (?, ?, ?);", (company_id, key, payload_str))
     log_activity(user_id, "IMPORT_FORECAST_CSV", "forecasts", product_id, f"Nhập {len(mapping)} ngày dữ liệu bán hàng cho SKU #{product_id}")
     return True, f"Đã nhập {len(mapping)} ngày dữ liệu thực tế cho SKU #{product_id} để LightGBM huấn luyện lại!", len(mapping)
 
@@ -255,16 +255,17 @@ def apply_po_recommendation(product_id: int, quantity: int, warehouse_id: int = 
     return ok, msg
 
 
-def get_regional_demand_distribution() -> List[Dict[str, Any]]:
-    rows = execute_query("""
+def get_regional_demand_distribution(company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    query = """
     SELECT c.province, COUNT(o.id) as order_count, COALESCE(SUM(o.total_amount), 0) as revenue_vnd,
            COALESCE(SUM(o.total_weight_kg), 0) as weight_kg
     FROM orders o
     JOIN customers c ON o.customer_id = c.id
-    WHERE o.status != 'CANCELLED'
+    WHERE o.status != 'CANCELLED' AND (? IS NULL OR o.company_id = ?)
     GROUP BY c.province
     ORDER BY revenue_vnd DESC;
-    """)
+    """
+    rows = execute_query(query, (company_id, company_id))
     total_orders = sum(r["order_count"] for r in rows) or 1
     return [
         {
@@ -278,14 +279,13 @@ def get_regional_demand_distribution() -> List[Dict[str, Any]]:
     ]
 
 
-def get_forecast_history(limit: int = 20) -> list:
-    return rows_to_dicts(execute_query(
-        """
-        SELECT f.*, p.sku, p.name as product_name
-        FROM forecasts f
-        JOIN products p ON f.product_id = p.id
-        ORDER BY f.id DESC
-        LIMIT ?;
-        """,
-        (limit,),
-    ))
+def get_forecast_history(company_id: Optional[int] = None, limit: int = 20) -> list:
+    query = """
+    SELECT f.*, p.sku, p.name as product_name
+    FROM forecasts f
+    JOIN products p ON f.product_id = p.id
+    WHERE (? IS NULL OR p.company_id = ?)
+    ORDER BY f.id DESC
+    LIMIT ?;
+    """
+    return rows_to_dicts(execute_query(query, (company_id, company_id, limit)))

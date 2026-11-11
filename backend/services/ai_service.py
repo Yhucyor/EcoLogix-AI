@@ -46,8 +46,9 @@ def process_agent_query(
     user_id: int = 1,
     conversation_id: Optional[int] = None,
     save_to_db: bool = True,
+    company_id: int = 1,
 ) -> Tuple[List[Dict[str, str]], str, Optional[Dict[str, Any]]]:
-    trace, content, action_button = orchestrate_query(user_query)
+    trace, content, action_button = orchestrate_query(user_query, company_id=company_id)
 
     if save_to_db and user_query.strip():
         conv_id = conversation_id or get_or_create_default_conversation(user_id)

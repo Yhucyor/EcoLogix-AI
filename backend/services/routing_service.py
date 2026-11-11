@@ -675,37 +675,52 @@ def _nearest_neighbor_plus_2opt(items: List[Dict[str, Any]], depot_lat: float, d
     return [items[idx - 1] for idx in seq]
 
 
-def get_vehicles() -> list:
+def get_vehicles(company_id: Optional[int] = None) -> list:
+    if company_id:
+        return rows_to_dicts(execute_query("SELECT * FROM vehicles WHERE company_id = ? ORDER BY id ASC;", (company_id,)))
     return rows_to_dicts(execute_query("SELECT * FROM vehicles ORDER BY id ASC;"))
 
 
-def get_pending_orders() -> list:
-    pending = rows_to_dicts(execute_query("""
+def get_pending_orders(company_id: Optional[int] = None) -> list:
+    query = """
     SELECT o.*, c.name as customer_name, c.district, c.province, c.lat, c.lng, c.address
     FROM orders o
     JOIN customers c ON o.customer_id = c.id
     WHERE o.status IN ('PENDING', 'PROCESSING')
-    ORDER BY o.is_urban_restricted DESC, o.id ASC;
-    """))
+    """
+    params = []
+    if company_id:
+        query += " AND o.company_id = ?"
+        params.append(company_id)
+    query += " ORDER BY o.is_urban_restricted DESC, o.id ASC;"
+    pending = rows_to_dicts(execute_query(query, tuple(params)))
     if pending:
         return pending
-    return rows_to_dicts(execute_query("""
+
+    query_ship = """
     SELECT o.*, c.name as customer_name, c.district, c.province, c.lat, c.lng, c.address
     FROM orders o
     JOIN customers c ON o.customer_id = c.id
     WHERE o.status = 'SHIPPING'
-    ORDER BY o.is_urban_restricted DESC, o.id ASC;
-    """))
+    """
+    params_ship = []
+    if company_id:
+        query_ship += " AND o.company_id = ?"
+        params_ship.append(company_id)
+    query_ship += " ORDER BY o.is_urban_restricted DESC, o.id ASC;"
+    return rows_to_dicts(execute_query(query_ship, tuple(params_ship)))
 
 
-def get_saved_routes(limit: int = 15) -> list:
-    return rows_to_dicts(execute_query("""
+def get_saved_routes(company_id: Optional[int] = None, limit: int = 15) -> list:
+    query = """
     SELECT r.*, v.vehicle_name, v.plate_number, v.fuel_type
     FROM routes r
     LEFT JOIN vehicles v ON r.vehicle_id = v.id
+    WHERE (? IS NULL OR r.company_id = ? OR v.company_id = ?)
     ORDER BY r.id DESC
     LIMIT ?;
-    """, (limit,)))
+    """
+    return rows_to_dicts(execute_query(query, (company_id, company_id, company_id, limit)))
 
 
 def load_100_delivery_points() -> list:
@@ -892,6 +907,7 @@ def _optimize_multi_vehicle_orders(
     total_load = round(sum(_item_weight(o) for o in orders), 1)
 
     route_code = f"RT-MV-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    comp_id = (orders[0].get("company_id") if orders else 1) or 1
     if save_to_db and assigned_routes:
         placeholders = ",".join(["?"] * len(orders))
         order_ids = [o["id"] for o in orders]
@@ -899,11 +915,12 @@ def _optimize_multi_vehicle_orders(
             sub_code = f"{route_code}-{idx_r + 1}" if len(assigned_routes) > 1 else route_code
             r_id = execute_insert(
                 """
-                INSERT INTO routes (route_code, vehicle_id, route_date, status, total_distance_km, baseline_distance_km, saved_distance_km,
+                INSERT INTO routes (company_id, route_code, vehicle_id, route_date, status, total_distance_km, baseline_distance_km, saved_distance_km,
                                     total_time_hours, fuel_consumed_liters, fuel_saved_liters, co2_emission_kg, saved_co2_kg, total_cost_vnd, saved_cost_vnd, is_optimized)
-                VALUES (?, ?, ?, 'Optimized', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1);
+                VALUES (?, ?, ?, ?, 'Optimized', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1);
                 """,
                 (
+                    comp_id,
                     sub_code,
                     rt["vehicle_id"],
                     datetime.now().strftime("%Y-%m-%d"),
@@ -1003,6 +1020,7 @@ def optimize_routes_for_orders(
     user_id: int = 1,
     algorithm: str = "auto",
     multi_vehicle: bool = False,
+    company_id: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Tối ưu hóa lộ trình giao hàng Green VRPTW từ SQLite bằng nhiều thuật toán:
@@ -1027,8 +1045,21 @@ def optimize_routes_for_orders(
     if not orders:
         return None
 
-    depot = cfg.DEPOT_LOCATION
-    vehicles = get_vehicles()
+    comp_scope = company_id or (orders[0].get("company_id") if orders else None)
+    depot = dict(cfg.DEPOT_LOCATION)
+    if comp_scope:
+        wh_rows = rows_to_dicts(execute_query(
+            "SELECT name, lat, lng, address FROM warehouses WHERE company_id = ? ORDER BY id ASC LIMIT 1;",
+            (comp_scope,)
+        ))
+        if wh_rows and wh_rows[0].get("lat") and wh_rows[0].get("lng"):
+            depot = {
+                "name": wh_rows[0]["name"],
+                "lat": float(wh_rows[0]["lat"]),
+                "lng": float(wh_rows[0]["lng"]),
+                "address": wh_rows[0].get("address") or cfg.DEPOT_LOCATION.get("address", ""),
+            }
+    vehicles = get_vehicles(company_id=comp_scope)
 
     if multi_vehicle:
         return _optimize_multi_vehicle_orders(cfg, orders, vehicles, depot, enforce_time_window, save_to_db, user_id)
@@ -1140,13 +1171,15 @@ def optimize_routes_for_orders(
 
     route_code = f"RT-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     if save_to_db and selected_vehicle:
+        route_comp_id = comp_scope or selected_vehicle.get("company_id") or 1
         r_id = execute_insert(
             """
-            INSERT INTO routes (route_code, vehicle_id, route_date, status, total_distance_km, baseline_distance_km, saved_distance_km,
+            INSERT INTO routes (company_id, route_code, vehicle_id, route_date, status, total_distance_km, baseline_distance_km, saved_distance_km,
                                 total_time_hours, fuel_consumed_liters, fuel_saved_liters, co2_emission_kg, saved_co2_kg, total_cost_vnd, saved_cost_vnd, is_optimized)
-            VALUES (?, ?, ?, 'Optimized', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1);
+            VALUES (?, ?, ?, ?, 'Optimized', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1);
             """,
             (
+                route_comp_id,
                 route_code,
                 selected_vehicle["id"],
                 datetime.now().strftime("%Y-%m-%d"),

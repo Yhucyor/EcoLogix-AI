@@ -59,20 +59,22 @@ class InventoryTxReq(BaseModel):
 
 
 @router.get("")
-def api_inventory(warehouse_id: Optional[int] = None, search: str = "", _: Dict[str, Any] = Depends(get_current_user)):
+def api_inventory(warehouse_id: Optional[int] = None, search: str = "", user: Dict[str, Any] = Depends(get_current_user)):
+    company_id = user.get("company_id") or 1
     return {
-        "warehouses": get_all_warehouses(),
-        "products": get_all_products(),
-        "inventory": get_inventory_status(warehouse_id=warehouse_id, search=search),
-        "transactions": get_transaction_history(limit=50),
-        "metrics": get_inventory_metrics(),
+        "warehouses": get_all_warehouses(company_id=company_id),
+        "products": get_all_products(company_id=company_id),
+        "inventory": get_inventory_status(company_id=company_id, warehouse_id=warehouse_id, search=search),
+        "transactions": get_transaction_history(company_id=company_id, limit=50),
+        "metrics": get_inventory_metrics(company_id=company_id),
     }
 
 
 @router.post("/products")
 def api_add_product(req: ProductReq, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager", "Dispatcher"))):
+    company_id = user.get("company_id") or 1
     ok, msg = add_product(
-        1, req.sku, req.name, req.category, req.unit, req.unit_price, req.weight_kg, req.min_stock, req.max_stock, user_id=user["id"]
+        company_id, req.sku, req.name, req.category, req.unit, req.unit_price, req.weight_kg, req.min_stock, req.max_stock, user_id=user["id"]
     )
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
@@ -99,7 +101,8 @@ def api_delete_product(product_id: int, user: Dict[str, Any] = Depends(require_r
 
 @router.post("/warehouses")
 def api_add_warehouse(req: WarehouseReq, user: Dict[str, Any] = Depends(require_roles("Admin", "Manager"))):
-    ok, msg = add_warehouse(req.name, req.code, req.address, req.capacity_m3, user_id=user["id"])
+    company_id = user.get("company_id") or 1
+    ok, msg = add_warehouse(req.name, req.code, req.address, req.capacity_m3, company_id=company_id, user_id=user["id"])
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     return {"ok": True, "message": msg}

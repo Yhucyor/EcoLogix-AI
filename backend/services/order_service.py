@@ -8,7 +8,7 @@ from backend.utils.helpers import log_activity, create_notification
 from backend.utils.validators import validate_non_empty
 
 
-def get_orders(status: Optional[str] = None, province: Optional[str] = None, search: str = "", limit: int = 100, offset: int = 0) -> list:
+def get_orders(company_id: Optional[int] = None, status: Optional[str] = None, province: Optional[str] = None, search: str = "", limit: int = 100, offset: int = 0) -> list:
     query = """
     SELECT o.*, c.name as customer_name, c.district, c.province, c.address as delivery_address,
            w.name as warehouse_name
@@ -18,6 +18,9 @@ def get_orders(status: Optional[str] = None, province: Optional[str] = None, sea
     WHERE 1=1
     """
     params = []
+    if company_id:
+        query += " AND o.company_id = ?"
+        params.append(company_id)
     if status and status != "ALL":
         query += " AND o.status = ?"
         params.append(status)
@@ -33,11 +36,14 @@ def get_orders(status: Optional[str] = None, province: Optional[str] = None, sea
     return rows_to_dicts(execute_query(query, tuple(params)))
 
 
-def get_order_stats() -> dict:
-    rows = execute_query("""
+def get_order_stats(company_id: Optional[int] = None) -> dict:
+    query = """
     SELECT status, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0) as total_val
-    FROM orders GROUP BY status;
-    """)
+    FROM orders
+    WHERE (? IS NULL OR company_id = ?)
+    GROUP BY status;
+    """
+    rows = execute_query(query, (company_id, company_id))
     counts = {r["status"]: r["cnt"] for r in rows}
     total_val = sum(r["total_val"] for r in rows)
     return {
@@ -51,15 +57,16 @@ def get_order_stats() -> dict:
     }
 
 
-def get_order_detail(order_id: int) -> Optional[dict]:
-    rows = execute_query("""
+def get_order_detail(order_id: int, company_id: Optional[int] = None) -> Optional[dict]:
+    query = """
     SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.address as delivery_address,
            c.district, c.province, w.name as warehouse_name, w.address as pickup_address
     FROM orders o
     JOIN customers c ON o.customer_id = c.id
     JOIN warehouses w ON o.warehouse_id = w.id
-    WHERE o.id = ?;
-    """, (order_id,))
+    WHERE o.id = ? AND (? IS NULL OR o.company_id = ?);
+    """
+    rows = execute_query(query, (order_id, company_id, company_id))
     if not rows:
         return None
     order = dict(rows[0])
@@ -83,6 +90,7 @@ def create_order(
     shipping_fee: float = 180000.0,
     manual_weight_kg: Optional[float] = None,
     manual_amount: Optional[float] = None,
+    company_id: int = 1,
     user_id: int = 1,
 ) -> Tuple[bool, str, Optional[int]]:
     ok, msg = validate_non_empty(order_code, "Mã đơn hàng")
@@ -117,9 +125,9 @@ def create_order(
     order_id = execute_insert(
         """
         INSERT INTO orders (company_id, order_code, customer_id, warehouse_id, status, total_weight_kg, total_amount, shipping_fee, time_window_start, time_window_end, is_urban_restricted)
-        VALUES (1, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?);
         """,
-        (order_code.strip().upper(), customer_id, warehouse_id, round(total_weight, 1), round(total_amount, 0), float(shipping_fee), time_window_start, time_window_end, is_restricted),
+        (company_id, order_code.strip().upper(), customer_id, warehouse_id, round(total_weight, 1), round(total_amount, 0), float(shipping_fee), time_window_start, time_window_end, is_restricted),
     )
 
     for p_id, qty, u_price in resolved_items:
@@ -137,21 +145,30 @@ def create_order(
     return True, f"Đã tạo đơn hàng `{order_code.upper()}` thành công!", order_id
 
 
-def update_order_status(order_id_or_code, new_status: str, user_id: int = 1) -> Tuple[bool, str]:
+def update_order_status(order_id_or_code, new_status: str, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
     valid_statuses = {"PENDING", "PROCESSING", "SHIPPING", "COMPLETED", "CANCELLED"}
     if new_status not in valid_statuses:
         return False, "Trạng thái không hợp lệ."
     if isinstance(order_id_or_code, int) or str(order_id_or_code).isdigit():
-        cnt = execute_update("UPDATE orders SET status = ? WHERE id = ?;", (new_status, int(order_id_or_code)))
+        cnt = execute_update(
+            "UPDATE orders SET status = ? WHERE id = ? AND (? IS NULL OR company_id = ?);",
+            (new_status, int(order_id_or_code), company_id, company_id),
+        )
     else:
-        cnt = execute_update("UPDATE orders SET status = ? WHERE order_code = ?;", (new_status, str(order_id_or_code)))
+        cnt = execute_update(
+            "UPDATE orders SET status = ? WHERE order_code = ? AND (? IS NULL OR company_id = ?);",
+            (new_status, str(order_id_or_code), company_id, company_id),
+        )
     if cnt == 0:
         return False, "Không tìm thấy đơn hàng."
     log_activity(user_id, "UPDATE_ORDER_STATUS", "orders", None, f"Đơn {order_id_or_code} -> {new_status}")
     return True, f"Đã cập nhật đơn `{order_id_or_code}` sang `{new_status}`!"
 
 
-def delete_order(order_id: int, user_id: int = 1) -> Tuple[bool, str]:
+def delete_order(order_id: int, company_id: Optional[int] = None, user_id: int = 1) -> Tuple[bool, str]:
+    check = execute_query("SELECT id FROM orders WHERE id = ? AND (? IS NULL OR company_id = ?);", (order_id, company_id, company_id))
+    if not check:
+        return False, "Không tìm thấy đơn hàng."
     in_route = execute_query("SELECT COUNT(*) as cnt FROM route_stops WHERE order_id = ?;", (order_id,))
     if in_route and in_route[0]["cnt"] > 0:
         execute_update("DELETE FROM route_stops WHERE order_id = ?;", (order_id,))

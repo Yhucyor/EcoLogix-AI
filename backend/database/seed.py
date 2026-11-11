@@ -398,5 +398,167 @@ def seed_all():
     print("✅ Đã seed dữ liệu mẫu liên kết đầy đủ cho toàn bộ 24 bảng của EcoLogix AI!")
 
 
+def seed_starter_company_data(company_id: int, company_name: str, admin_user_id: int = 1):
+    """Khởi tạo bộ dữ liệu vận hành khởi đầu cho một doanh nghiệp mới:
+    Kho bãi, sản phẩm FMCG, tồn kho, phương tiện, khách hàng, đơn hàng chờ và báo cáo ESG/Tài chính.
+    """
+    clean_name = (company_name or f"Doanh Nghiệp #{company_id}").strip()
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 1. System Settings
+        settings = [
+            (company_id, "FUEL_PRICE_PER_LITER", "23500", "Giá xăng/dầu cơ sở áp dụng (VNĐ/Lít)"),
+            (company_id, "CARBON_TAX_RATE", "500", "Đơn giá thuế phát thải Carbon (VNĐ/kg CO2)"),
+            (company_id, "MAX_VEHICLE_LOAD_KG", "1500", "Tải trọng xe tối đa tiêu chuẩn (kg)"),
+            (company_id, "RESTRICTED_TIME_WINDOW", "16:00-18:00", "Khung giờ cấm xe tải lưu thông nội đô"),
+            (company_id, "ESG_TARGET_REDUCTION_PCT", "18.0", "Mục tiêu cắt giảm phát thải CO2 (%)"),
+            (company_id, "AI_PROVIDER_MODE", "Hybrid-Demo", "Chế độ Multi-Agent (Hybrid-Demo / Gemini / OpenAI)"),
+            (company_id, "LLM_API_KEY", "", "API Key LLM tùy chọn"),
+        ]
+        for s in settings:
+            cursor.execute("SELECT id FROM system_settings WHERE company_id = ? AND setting_key = ?;", (company_id, s[1]))
+            if not cursor.fetchall():
+                cursor.execute(
+                    "INSERT INTO system_settings (company_id, setting_key, setting_value, description) VALUES (?, ?, ?, ?);",
+                    s,
+                )
+
+        # 2. Central Warehouse
+        wh_code = f"WH-C{company_id}-01"
+        cursor.execute("SELECT id FROM warehouses WHERE company_id = ? OR code = ?;", (company_id, wh_code))
+        wh_rows = cursor.fetchall()
+        if not wh_rows:
+            cursor.execute("""
+            INSERT INTO warehouses (company_id, name, code, address, lat, lng, capacity_m3, current_utilization_pct, is_central_hub)
+            VALUES (?, ?, ?, 'Khu Công Nghệ Cao, TP. Thủ Đức, TP.HCM', 10.8505, 106.7718, 3000.0, 58.0, 1);
+            """, (company_id, f"Kho Tổng {clean_name}", wh_code))
+            wh_id = cursor.lastrowid
+        else:
+            wh_id = wh_rows[0][0]
+
+        # 3. Products & Initial Inventory
+        products = [
+            (company_id, f"SKU-C{company_id}-01", "Nước Ngọt Lon 330ml (Thùng 24)", "Đồ uống", "Thùng", 210000, 8.5, 90, 450, 180, 45, 108),
+            (company_id, f"SKU-C{company_id}-02", "Dầu Ăn Thực Vật 1L (Thùng 12)", "Thực phẩm", "Thùng", 420000, 11.2, 40, 300, 95, 20, 48),
+            (company_id, f"SKU-C{company_id}-03", "Mì Gói Hảo Vị (Thùng 30)", "Thực phẩm khô", "Thùng", 115000, 2.8, 80, 600, 320, 40, 96),
+            (company_id, f"SKU-C{company_id}-04", "Bột Giặt Sinh Học 3kg (Bao)", "Hóa mỹ phẩm", "Bao", 165000, 3.1, 30, 250, 80, 15, 36),
+        ]
+        created_pids = []
+        for p in products:
+            cursor.execute("SELECT id FROM products WHERE sku = ?;", (p[1],))
+            p_exist = cursor.fetchall()
+            if not p_exist:
+                cursor.execute("""
+                INSERT INTO products (company_id, sku, name, category, unit, unit_price, weight_kg, min_stock, max_stock)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, p[:9])
+                p_id = cursor.lastrowid
+                created_pids.append((p_id, p[5], p[6]))
+                cursor.execute("""
+                INSERT INTO inventory (warehouse_id, product_id, quantity, safety_stock, reorder_point)
+                VALUES (?, ?, ?, ?, ?);
+                """, (wh_id, p_id, p[9], p[10], p[11]))
+            else:
+                created_pids.append((p_exist[0][0], p[5], p[6]))
+
+        # 4. Vehicles
+        vehicles = [
+            (company_id, f"51C-{company_id:02d}8.45", f"Xe Tải {clean_name} 1.5T", "Tải nhẹ Thaco Towner", 1500.0, "Diesel", 11.5, 3800.0, "Available"),
+            (company_id, f"50E-{company_id:02d}9.90", f"Xe Điện {clean_name} EV", "Xe tải điện VinFast / JAC", 1200.0, "Electric", 0.0, 1950.0, "Available"),
+        ]
+        for v in vehicles:
+            cursor.execute("SELECT id FROM vehicles WHERE plate_number = ?;", (v[1],))
+            if not cursor.fetchall():
+                cursor.execute("""
+                INSERT INTO vehicles (company_id, plate_number, vehicle_name, vehicle_type, max_load_kg, fuel_type, fuel_consumption_per_100km, operational_cost_per_km, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, v)
+
+        # 5. Customers
+        customers = [
+            (company_id, f"Đại Lý Tạp Hóa Minh Phát (C{company_id})", "0908123456", f"minhphat.c{company_id}@gmail.com", "125 Hai Bà Trưng, Phường Bến Nghé", "Quận 1", "TP.HCM", 10.7785, 106.6985, "VIP", 35000000),
+            (company_id, f"Siêu Thị Tiện Lợi An Khang (C{company_id})", "0912456789", f"ankhang.c{company_id}@gmail.com", "45 Nguyễn Đình Chiểu, Phường Đa Kao", "Quận 3", "TP.HCM", 10.7850, 106.6850, "Standard", 22000000),
+            (company_id, f"Bách Hóa Tiêu Dùng Thủ Đức (C{company_id})", "0933789012", f"bachhoa.c{company_id}@gmail.com", "88 Võ Văn Ngân, Linh Chiểu", "TP. Thủ Đức", "TP.HCM", 10.8520, 106.7680, "Standard", 18000000),
+        ]
+        created_cids = []
+        for c in customers:
+            cursor.execute("SELECT id FROM customers WHERE company_id = ? AND name = ?;", (company_id, c[1]))
+            c_exist = cursor.fetchall()
+            if not c_exist:
+                cursor.execute("""
+                INSERT INTO customers (company_id, name, phone, email, address, district, province, lat, lng, customer_tier, total_spent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, c)
+                created_cids.append(cursor.lastrowid)
+            else:
+                created_cids.append(c_exist[0][0])
+
+        # 6. Supplier
+        cursor.execute("SELECT id FROM suppliers WHERE company_id = ?;", (company_id,))
+        if not cursor.fetchall():
+            cursor.execute("""
+            INSERT INTO suppliers (company_id, name, phone, email, address, products_supplied, debt_vnd)
+            VALUES (?, ?, '02838991234', ?, 'KCN Tân Bình, TP.HCM', 'Nông sản & Thực phẩm tiêu dùng', 8500000);
+            """, (company_id, f"Công Ty Cung Ứng Nông Sản Sạch Miền Nam (C{company_id})", f"supplier.c{company_id}@eco.vn"))
+
+        # 7. Starter Orders
+        if created_cids and created_pids:
+            order_data = [
+                (company_id, f"ORD-C{company_id}-001", created_cids[0], wh_id, "PENDING", 120.0, 3150000.0, 180000.0, "08:00", "11:30", 0),
+                (company_id, f"ORD-C{company_id}-002", created_cids[1 % len(created_cids)], wh_id, "PENDING", 85.0, 2100000.0, 150000.0, "13:30", "16:30", 0),
+            ]
+            for od in order_data:
+                cursor.execute("SELECT id FROM orders WHERE order_code = ?;", (od[1],))
+                if not cursor.fetchall():
+                    cursor.execute("""
+                    INSERT INTO orders (company_id, order_code, customer_id, warehouse_id, status, total_weight_kg, total_amount, shipping_fee, time_window_start, time_window_end, is_urban_restricted)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, od)
+                    new_oid = cursor.lastrowid
+                    cursor.execute("""
+                    INSERT INTO order_items (order_id, product_id, quantity, unit_price)
+                    VALUES (?, ?, 10, ?);
+                    """, (new_oid, created_pids[0][0], created_pids[0][1]))
+
+        # 8. Starter Expenses (2 tháng gần nhất)
+        cursor.execute("SELECT id FROM expenses WHERE company_id = ?;", (company_id,))
+        if not cursor.fetchall():
+            exp_data = [
+                (company_id, "labor", 32000000.0, "2026-10-15", "Lương tài xế & nhân viên kho Tháng 10"),
+                (company_id, "fuel", 11500000.0, "2026-10-25", "Nhiên liệu vận chuyển giao hàng Tháng 10"),
+                (company_id, "storage", 14000000.0, "2026-10-30", "Chi phí lưu kho & bảo quản Tháng 10"),
+                (company_id, "carbon_tax", 380000.0, "2026-10-31", "Thuế phát thải CO2 Tháng 10"),
+                (company_id, "labor", 34000000.0, "2026-11-05", "Lương tài xế & nhân viên kho Tháng 11"),
+                (company_id, "fuel", 10200000.0, "2026-11-08", "Nhiên liệu đội xe vận hành Tháng 11"),
+                (company_id, "storage", 14000000.0, "2026-11-09", "Chi phí kho vận bãi Tháng 11"),
+                (company_id, "carbon_tax", 310000.0, "2026-11-10", "Thuế carbon tính theo lộ trình thực tế"),
+            ]
+            for exp in exp_data:
+                cursor.execute("""
+                INSERT INTO expenses (company_id, category, amount_vnd, expense_date, note)
+                VALUES (?, ?, ?, ?, ?);
+                """, exp)
+
+        # 9. Starter ESG Baseline Report
+        cursor.execute("SELECT id FROM esg_reports WHERE company_id = ?;", (company_id,))
+        if not cursor.fetchall():
+            cursor.execute("""
+            INSERT INTO esg_reports (company_id, month, year, total_co2_kg, co2_saved_kg, green_logistics_score, report_url)
+            VALUES (?, 10, 2026, 1720.0, 310.0, 93.5, '/api/reports/export/pdf');
+            """, (company_id,))
+
+        # 10. Starter Notification
+        if admin_user_id:
+            cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, type, is_read)
+            VALUES (?, ?, ?, 'success', 0);
+            """, (
+                admin_user_id,
+                f"Chào mừng đến với không gian vận hành {clean_name}",
+                "Kho tổng, 4 mặt hàng FMCG, 2 phương tiện và 2 đơn hàng mẫu đã được kích hoạt. Hãy thử tính năng Tối ưu lộ trình Green VRP ngay!",
+            ))
+
+
 if __name__ == "__main__":
     seed_all()

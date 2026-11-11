@@ -31,19 +31,20 @@ def health():
 
 
 @router.get("/api/search")
-def global_search(q: str = "", _: Dict[str, Any] = Depends(get_current_user)):
+def global_search(q: str = "", user: Dict[str, Any] = Depends(get_current_user)):
     kw = q.strip()
     if not kw:
         return {"results": []}
+    company_id = user.get("company_id") or 1
     like = f"%{kw}%"
     results = []
-    for o in execute_query("SELECT id, order_code, status FROM orders WHERE order_code LIKE ? LIMIT 4;", (like,)):
+    for o in execute_query("SELECT id, order_code, status FROM orders WHERE company_id = ? AND order_code LIKE ? LIMIT 4;", (company_id, like)):
         results.append({"type": "order", "label": f"Đơn {o['order_code']} ({o['status']})", "page": "orders"})
-    for p in execute_query("SELECT id, sku, name FROM products WHERE sku LIKE ? OR name LIKE ? LIMIT 4;", (like, like)):
+    for p in execute_query("SELECT id, sku, name FROM products WHERE company_id = ? AND (sku LIKE ? OR name LIKE ?) LIMIT 4;", (company_id, like, like)):
         results.append({"type": "product", "label": f"{p['sku']} - {p['name']}", "page": "inventory"})
-    for v in execute_query("SELECT id, plate_number, vehicle_name FROM vehicles WHERE plate_number LIKE ? OR vehicle_name LIKE ? LIMIT 4;", (like, like)):
+    for v in execute_query("SELECT id, plate_number, vehicle_name FROM vehicles WHERE company_id = ? AND (plate_number LIKE ? OR vehicle_name LIKE ?) LIMIT 4;", (company_id, like, like)):
         results.append({"type": "vehicle", "label": f"Xe {v['plate_number']} ({v['vehicle_name']})", "page": "vehicles"})
-    for c in execute_query("SELECT id, name, province FROM customers WHERE name LIKE ? LIMIT 4;", (like,)):
+    for c in execute_query("SELECT id, name, province FROM customers WHERE company_id = ? AND name LIKE ? LIMIT 4;", (company_id, like)):
         results.append({"type": "customer", "label": f"KH: {c['name']} ({c['province']})", "page": "partners"})
     return {"results": results}
 
@@ -84,12 +85,18 @@ def submit_contact(req: ContactReq):
 
 
 @router.get("/api/dashboard")
-def api_dashboard(_: Dict[str, Any] = Depends(get_current_user)):
+def api_dashboard(user: Dict[str, Any] = Depends(get_current_user)):
     importlib.reload(config)
-    fin = get_financial_overview()
-    esg = get_esg_overview()
-    inv = get_inventory_metrics()
-    active_routes = rows_to_dicts(execute_query("SELECT * FROM routes ORDER BY id DESC LIMIT 3;"))
+    company_id = user.get("company_id") or 1
+    fin = get_financial_overview(company_id=company_id)
+    esg = get_esg_overview(company_id=company_id)
+    inv = get_inventory_metrics(company_id=company_id)
+    active_routes = rows_to_dicts(execute_query("""
+    SELECT r.* FROM routes r
+    LEFT JOIN vehicles v ON r.vehicle_id = v.id
+    WHERE (? IS NULL OR r.company_id = ? OR v.company_id = ?)
+    ORDER BY r.id DESC LIMIT 3;
+    """, (company_id, company_id, company_id)))
     map_routes = []
     for rt in active_routes:
         stops = rows_to_dicts(execute_query(
@@ -98,10 +105,22 @@ def api_dashboard(_: Dict[str, Any] = Depends(get_current_user)):
         ))
         map_routes.append({**rt, "stops": stops})
 
-    low_items = [r for r in get_inventory_status() if r["quantity"] <= r["safety_stock"]]
-    logs = rows_to_dicts(execute_query("SELECT * FROM activity_logs ORDER BY id DESC LIMIT 6;"))
-    unread_rows = execute_query("SELECT COUNT(*) as cnt FROM notifications WHERE is_read = 0;")
-    comp_rows = rows_to_dicts(execute_query("SELECT name FROM companies ORDER BY id ASC LIMIT 1;"))
+    low_items = [r for r in get_inventory_status(company_id=company_id) if r["quantity"] <= r["safety_stock"]]
+    logs = rows_to_dicts(execute_query("""
+    SELECT a.* FROM activity_logs a
+    JOIN users u ON a.user_id = u.id
+    WHERE u.company_id = ?
+    ORDER BY a.id DESC LIMIT 6;
+    """, (company_id,)))
+    unread_rows = execute_query("SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND is_read = 0;", (user["id"],))
+    comp_rows = rows_to_dicts(execute_query("SELECT name FROM companies WHERE id = ?;", (company_id,)))
+    wh_rows = rows_to_dicts(execute_query("SELECT name, lat, lng, address FROM warehouses WHERE company_id = ? ORDER BY id ASC LIMIT 1;", (company_id,)))
+    depot = {
+        "name": wh_rows[0]["name"],
+        "lat": float(wh_rows[0]["lat"]),
+        "lng": float(wh_rows[0]["lng"]),
+        "address": wh_rows[0].get("address") or config.DEPOT_LOCATION.get("address", "")
+    } if wh_rows and wh_rows[0].get("lat") and wh_rows[0].get("lng") else config.DEPOT_LOCATION
 
     return {
         "financial": fin["financial_summary"],
@@ -111,7 +130,7 @@ def api_dashboard(_: Dict[str, Any] = Depends(get_current_user)):
         "esg_history": esg["esg_history"],
         "inventory": inv,
         "low_stock_items": low_items[:5],
-        "depot": config.DEPOT_LOCATION,
+        "depot": depot,
         "map_routes": map_routes,
         "activity_logs": logs,
         "unread_notifications": unread_rows[0]["cnt"] if unread_rows else 0,

@@ -87,7 +87,7 @@ function RoutingView({ showToast, onRefreshHeader }) {
 
   const activeMapProps = useMemo(() => {
     const active = subTab === '100points' ? points100 : routeResult;
-    const depot = active?.depot || { lat: 10.8505, lng: 106.7718, name: 'Kho Tổng EcoLogix (TP. Thủ Đức)' };
+    const depot = active?.depot || initData?.depot || { lat: 10.8505, lng: 106.7718, name: 'Kho Tổng EcoLogix (TP. Thủ Đức)' };
     if (subTab === '100points' && active?.routes) {
       const vCol = { 'XE-01': '#10B981', 'XE-02': '#3B82F6', 'XE-03': '#8B5CF6' };
       return {

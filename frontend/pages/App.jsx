@@ -189,7 +189,7 @@ function App() {
       saveAuthSession(nextUser, getAuthToken(), remembered);
     }
     setCurrentPage('dashboard');
-    showToast('Thiết lập doanh nghiệp hoàn tất! Đã lưu vào SQLite & config.py.');
+    showToast('Thiết lập doanh nghiệp hoàn tất! Đã kích hoạt dữ liệu độc lập cho doanh nghiệp của bạn.');
   };
 
   const openAiWithPrompt = (promptText) => {
