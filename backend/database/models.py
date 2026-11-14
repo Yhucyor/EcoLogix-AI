@@ -340,6 +340,40 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
+
+-- 25. AGENT CHECKPOINTS (LangGraph State Persistence)
+CREATE TABLE IF NOT EXISTS agent_checkpoints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id VARCHAR(191) NOT NULL,
+    checkpoint_id VARCHAR(191) NOT NULL,
+    parent_checkpoint_id VARCHAR(191),
+    company_id INTEGER,
+    state_json TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(thread_id, checkpoint_id)
+);
+
+-- 26. AGENT PROPOSALS (Human-in-the-Loop Approval & Idempotency)
+CREATE TABLE IF NOT EXISTS agent_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    proposal_code VARCHAR(100) UNIQUE NOT NULL,
+    company_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    thread_id VARCHAR(191) NOT NULL,
+    run_id VARCHAR(191) NOT NULL,
+    proposal_type VARCHAR(64) NOT NULL,
+    candidate_id VARCHAR(100),
+    snapshot_ref VARCHAR(100),
+    status VARCHAR(32) DEFAULT 'PENDING',
+    version INTEGER DEFAULT 1,
+    expires_at TIMESTAMP,
+    summary TEXT,
+    payload_json TEXT NOT NULL,
+    result_json TEXT,
+    request_id VARCHAR(191),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -370,7 +404,7 @@ def init_database():
         if dialect == "mysql":
             cur.execute("SELECT COUNT(*) AS cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();")
             tbl_cnt = int(cur.fetchone()[0])
-            if tbl_cnt < 24:
+            if tbl_cnt < 26:
                 conn.executescript(ddl)
             cur.execute(
                 "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('users', 'routes', 'forecasts');"
@@ -405,7 +439,7 @@ def init_database():
             cur.execute("UPDATE routes SET company_id = 1 WHERE company_id IS NULL;")
         except Exception:
             pass
-    print(f"✅ Đã khởi tạo & đồng bộ schema 24 bảng dữ liệu cho EcoLogix AI ({dialect}).")
+    print(f"✅ Đã khởi tạo & đồng bộ schema 26 bảng dữ liệu cho EcoLogix AI ({dialect}).")
 
 
 if __name__ == "__main__":

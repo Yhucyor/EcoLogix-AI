@@ -148,7 +148,7 @@ def get_road_route_geometry(waypoints: List[Tuple[float, float]]) -> Dict[str, A
 
 def _build_dist_matrix(items: List[Dict[str, Any]], depot_lat: float, depot_lng: float, use_osrm: bool = True) -> np.ndarray:
     """Ma trận khoảng cách đường bộ (ưu tiên OSRM Table API thực tế, fallback Haversine * 1.35)."""
-    coords = [(float(depot_lat), float(depot_lng))] + [(float(it["lat"]), float(it["lng"])) for it in items]
+    coords = [(float(depot_lat), float(depot_lng))] + [(float(it.get("lat") or 10.85), float(it.get("lng") or 106.77)) for it in items]
     n = len(coords)
     mat = np.zeros((n, n), dtype=float)
     for i in range(n):
@@ -774,13 +774,16 @@ def _build_fleet_recommendations(
         ev = _evaluate_sequence(seq, orders, dist_mat, cap, tw_s, tw_e, enforce_tw)
         cost = _compute_cost_for_eval(cfg, ev, cons, is_ev, enforce_tw, cap)
         total_w = sum(_item_weight(o) for o in orders)
+        fits_load = total_w <= cap
         recs.append({
             "vehicle_id": v["id"],
             "vehicle_name": v["vehicle_name"],
             "plate_number": v["plate_number"],
             "fuel_type": v["fuel_type"],
             "max_load_kg": cap,
-            "fits_load": total_w <= cap,
+            "fits_load": fits_load,
+            "is_feasible": fits_load,
+            "infeasible_reason": f"Quá tải: {total_w} kg > {cap} kg" if not fits_load else None,
             "total_cost_vnd": cost["total_cost_vnd"],
             "co2_emission_kg": cost["co2_emission_kg"],
             "fuel_needed_liters": cost["fuel_needed_liters"],
@@ -898,8 +901,7 @@ def _optimize_multi_vehicle_orders(
         })
 
     total_dist = round(total_dist, 1)
-    if baseline_dist <= total_dist:
-        baseline_dist = round(total_dist * 1.18, 1)
+    baseline_dist = round(baseline_dist, 1)
     saved_dist = round(max(0.0, baseline_dist - total_dist), 1)
     saved_fuel = round(max(0.0, baseline_cost["fuel_needed_liters"] - total_fuel), 2)
     saved_co2 = round(max(0.0, baseline_cost["co2_emission_kg"] - total_co2), 2)
@@ -1125,14 +1127,14 @@ def optimize_routes_for_orders(
     total_load = round(sum(_item_weight(o) for o in orders), 1)
     overload_warning = total_load > max_cap
 
-    # Baseline so sánh: dùng FIFO thực tế (giữ chặn tối thiểu nếu đơn mẫu quá ít đã thẳng hàng sẵn)
+    # Baseline so sánh: dùng đúng thứ tự FIFO thực tế, không nâng giả tạo khoảng cách
+    baseline_dist = round(fifo_eval["distance_km"], 1)
     baseline_cost = cfg.update_operational_cost(
-        distance_km=max(fifo_eval["distance_km"], round(total_dist * 1.12, 1)),
+        distance_km=baseline_dist,
         is_restricted_violation=(fifo_eval["curfew_conflicts"] > 0),
-        fuel_consumption_per_100km=cfg.FUEL_CONSUMPTION_PER_100KM,
-        is_electric=False,
+        fuel_consumption_per_100km=veh_cons,
+        is_electric=is_electric,
     )
-    baseline_dist = round(max(fifo_eval["distance_km"], total_dist * 1.12), 1)
 
     saved_distance = round(max(0.0, baseline_dist - total_dist), 1)
     saved_fuel = round(max(0.0, baseline_cost["fuel_needed_liters"] - opt_cost["fuel_needed_liters"]), 2)
@@ -1221,7 +1223,7 @@ def optimize_routes_for_orders(
 
     vehicle_recs = _build_fleet_recommendations(cfg, best_seq, orders, dist_mat, vehicles, tw_s, tw_e, enforce_time_window)
     road_geo = get_road_route_geometry(
-        [(depot["lat"], depot["lng"])] + [(s["lat"], s["lng"]) for s in schedule] + [(depot["lat"], depot["lng"])]
+        [(depot["lat"], depot["lng"])] + [(s.get("lat") or 10.85, s.get("lng") or 106.77) for s in schedule] + [(depot["lat"], depot["lng"])]
     )
 
     return {
@@ -1235,6 +1237,9 @@ def optimize_routes_for_orders(
         "ordered_stops": schedule,
         "geometry": road_geo["points"],
         "road_snapped": road_geo["snapped"],
+        "distance_source": "osrm" if road_geo.get("snapped") else "estimated",
+        "is_feasible": (not overload_warning) and (best_eval["curfew_conflicts"] == 0 if enforce_time_window else True),
+        "infeasible_reasons": (["Quá tải trọng phương tiện"] if overload_warning else []) + (["Vi phạm khung giờ cấm tải"] if enforce_time_window and best_eval["curfew_conflicts"] > 0 else []),
         "total_stops": len(schedule),
         "total_distance_km": total_dist,
         "baseline_distance_km": baseline_dist,
