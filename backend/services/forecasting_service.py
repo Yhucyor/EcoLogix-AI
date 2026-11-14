@@ -104,13 +104,13 @@ def _build_daily_history(product_id: int, days: int = 60) -> pd.DataFrame:
 
 def _featurize(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    out["dayofweek"] = out["date"].dt.dayofweek
+    out["dayofweek"] = out["date"].dt.day_of_week
     out["is_weekend"] = out["dayofweek"].isin([4, 5, 6]).astype(int)
     out["day"] = out["date"].dt.day
     out["trend_idx"] = np.arange(len(out))
     out["lag_1"] = out["actual"].shift(1).bfill()
     out["lag_7"] = out["actual"].shift(7).bfill()
-    out["rolling_7"] = out["actual"].rolling(7, min_periods=1).mean()
+    out["rolling_7"] = out["actual"].shift(1).rolling(7, min_periods=1).mean().bfill()
     return out
 
 
@@ -141,9 +141,16 @@ def get_forecast_for_product(product_id: int, horizon_days: int = 30, save_histo
     )
     model.fit(X_train, y_train)
     val_preds = np.maximum(1.0, model.predict(X_val))
-    mape = float(np.mean(np.abs((y_val.values - val_preds) / np.maximum(1.0, y_val.values))) * 100.0)
+    sum_actual = float(np.sum(y_val.values))
+    if sum_actual > 0:
+        wape = float(np.sum(np.abs(y_val.values - val_preds)) / sum_actual * 100.0)
+        accuracy_pct = round(max(0.0, min(100.0, 100.0 - wape)), 1)
+        mape = float(np.mean(np.abs((y_val.values - val_preds) / np.maximum(1.0, y_val.values))) * 100.0)
+    else:
+        wape = None
+        accuracy_pct = None
+        mape = None
     residual_std = float(np.std(y_val.values - val_preds)) if len(y_val) > 1 else float(np.std(y_train) * 0.12)
-    accuracy_pct = round(max(82.0, min(98.2, 100.0 - mape)), 1)
 
     # Huấn luyện lại trên toàn bộ 60 ngày lịch sử trước khi dự báo tương lai
     model.fit(feat_df[feature_cols], feat_df["actual"])
@@ -232,7 +239,8 @@ def get_forecast_for_product(product_id: int, horizon_days: int = 30, save_histo
         "current_qty": current_qty,
         "suggested_po": suggested_po,
         "accuracy_pct": accuracy_pct,
-        "mape_pct": round(mape, 1),
+        "wape_pct": round(wape, 1) if wape is not None else None,
+        "mape_pct": round(mape, 1) if mape is not None else None,
         "weekly_buckets": weekly_buckets,
         "model_name": f"LightGBM {lgb.__version__}",
     }

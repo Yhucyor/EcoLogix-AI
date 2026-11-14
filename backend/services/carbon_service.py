@@ -23,9 +23,8 @@ def get_esg_overview(company_id: Optional[int] = None) -> dict:
     latest = esg_history[-1] if esg_history else {}
     total_co2_all = sum(r["total_co2_kg"] for r in esg_history)
     total_saved_all = sum(r["co2_saved_kg"] for r in esg_history)
-    reduction_pct = round((total_saved_all / max(1.0, total_co2_all + total_saved_all)) * 100.0, 1) if (total_co2_all + total_saved_all) > 0 else 18.7
-    # Đảm bảo phản ánh mức giảm thực tế cộng thêm các chuyến vừa tối ưu
-    green_score = float(latest.get("green_logistics_score") or (94.0 if esg_history else 88.0))
+    reduction_pct = round((total_saved_all / max(1.0, total_co2_all + total_saved_all)) * 100.0, 1) if (total_co2_all + total_saved_all) > 0 else 0.0
+    green_score = float(latest.get("green_logistics_score") or 0.0) if esg_history else 0.0
 
     vehicle_perf = rows_to_dicts(execute_query("""
     SELECT v.id, v.plate_number, v.vehicle_name, v.fuel_type, v.status,

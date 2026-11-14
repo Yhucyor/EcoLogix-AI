@@ -53,7 +53,7 @@ def get_financial_overview(company_id: Optional[int] = None) -> dict:
     rt_stat = dict(rt_rows[0]) if rt_rows else {}
     base_d = float(rt_stat.get("base_dist_km") or 0)
     real_d = float(rt_stat.get("dist_km") or 0)
-    cost_saving_pct = round(((base_d - real_d) / base_d) * 100.0, 1) if base_d > 0 else 21.5
+    cost_saving_pct = round(((base_d - real_d) / base_d) * 100.0, 1) if base_d > 0 else 0.0
 
     # Chi phí & doanh thu / lợi nhuận theo từng tháng
     monthly_rows = execute_query("""
