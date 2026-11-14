@@ -27,3 +27,4 @@ class AgentState(TypedDict, total=False):
     reply: str
     trace: List[Dict[str, Any]]
     action: Optional[Dict[str, Any]]
+

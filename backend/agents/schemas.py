@@ -69,3 +69,4 @@ class ChatResponse(BaseModel):
     proposal: Optional[Dict[str, Any]] = None
     action: Optional[Dict[str, Any]] = None
     messages: List[Dict[str, Any]] = Field(default_factory=list)
+

@@ -275,3 +275,4 @@ def decide_proposal(
         except Exception as e:
             conn.rollback()
             return False, f"Lỗi transaction khi áp dụng đề xuất: {str(e)}", None
+

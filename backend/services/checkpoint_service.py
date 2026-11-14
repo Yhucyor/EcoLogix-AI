@@ -99,3 +99,4 @@ class InMemorySaver:
 
 def get_default_checkpointer(company_id: int = 1) -> DbCheckpointer:
     return DbCheckpointer(company_id=company_id)
+

@@ -659,3 +659,4 @@ def build_ecologix_graph(checkpointer=None) -> CompiledStateGraph:
     workflow.add_edge("compose_response", END)
 
     return workflow.compile(checkpointer=checkpointer)
+
